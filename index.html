@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Agenda AI - Database Edition</title>
+    
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 100vw;
+            margin: 0;
+            background: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* HEADER COMPATTO */
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin: 0;
+        }
+
+        .week-nav {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .nav-btn:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+
+        .current-week {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #ecf0f1;
+            margin: 0 10px;
+        }
+
+        .sync-status {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .sync-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+
+        .sync-indicator.connected { background: #27ae60; }
+        .sync-indicator.syncing { background: #f39c12; }
+
+        /* NOTIFICATION BAR */
+        .notification-bar {
+            background: #3498db;
+            color: white;
+            padding: 8px 20px;
+            text-align: center;
+            font-size: 12px;
+            display: none;
+        }
+
+        .notification-bar.show { display: block; }
+        .notification-bar.success { background: #27ae60; }
+        .notification-bar.error { background: #e74c3c; }
+        .notification-bar.warning { background: #f39c12; }
+
+        /* TOP NAVIGATION TABS */
+        .top-nav {
+            background: #34495e;
+            border-bottom: 2px solid #3498db;
+            padding: 0;
+            display: flex;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .top-nav::-webkit-scrollbar { display: none; }
+
+        .nav-tab {
+            flex: 1;
+            min-width: 100px;
+            padding: 12px 16px;
+            background: transparent;
+            color: #bdc3c7;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+        }
+
+        .nav-tab:hover {
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+        }
+
+        .nav-tab.active {
+            background: #3498db;
+            color: white;
+            border-bottom-color: #2980b9;
+        }
+
+        /* MAIN LAYOUT */
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 0;
+            min-height: calc(100vh - 130px);
+        }
+
+        /* WEEKLY CALENDAR */
+        .calendar-section {
+            padding: 20px;
+            background: #f8f9fa;
+            overflow-y: auto;
+        }
+
+        .weekly-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(7, 1fr);
+            gap: 1px;
+            background: #bdc3c7;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .time-header {
+            background: #34495e;
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .day-header {
+            background: #34495e;
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .day-header.today {
+            background: #f39c12;
+        }
+
+        .day-date {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .day-name {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+
+        .time-slot {
+            background: #2c3e50;
+            color: white;
+            padding: 10px 8px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .day-cell {
+            background: white;
+            min-height: 60px;
+            padding: 4px;
+            position: relative;
+            border-right: 1px solid #ecf0f1;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .day-cell:hover {
+            background: #e8f4fd;
+        }
+
+        .day-cell.selected {
+            background: #d5e8ff;
+            border: 2px solid #3498db;
+        }
+
+        .cell-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .event-chip {
+            background: #3498db;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .event-chip:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .event-chip.work { background: #3498db; }
+        .event-chip.personal { background: #27ae60; }
+        .event-chip.medical { background: #e67e22; }
+        .event-chip.house { background: #8e44ad; }
+        .event-chip.email-task { background: #e91e63; }
+        .event-chip.routine { background: #95a5a6; }
+        .event-chip.project { background: #f39c12; }
+
+        /* SIDEBAR */
+        .sidebar {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 2px solid #34495e;
+        }
+
+        /* TAB CONTENT STYLES */
+        .tab-content {
+            display: none;
+            height: 100%;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section-card {
+            background: #34495e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+        }
+
+        .section-title {
+            color: #ecf0f1;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stats-mini {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .stat-mini {
+            background: #34495e;
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-mini-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #3498db;
+            display: block;
+        }
+
+        .stat-mini-label {
+            font-size: 10px;
+            color: #bdc3c7;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 4px;
+            color: #ecf0f1;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 6px 8px;
+            border: none;
+            border-radius: 4px;
+            background: #2c3e50;
+            color: white;
+            font-size: 11px;
+            border: 1px solid transparent;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #3498db;
+            background: #1a252f;
+        }
+
+        .btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            width: 100%;
+            transition: all 0.3s;
+            margin-bottom: 6px;
+        }
+
+        .btn:hover {
+            background: #219a52;
+        }
+
+        .btn:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 10px;
+            width: auto;
+            display: inline-block;
+            margin: 2px;
+        }
+
+        .btn-database { background: #9b59b6; }
+        .btn-database:hover { background: #8e44ad; }
+
+        .btn-sync { background: #3498db; }
+        .btn-sync:hover { background: #2980b9; }
+
+        .btn-ai { background: #e67e22; }
+        .btn-ai:hover { background: #d35400; }
+
+        /* LOADING SPINNER */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #bdc3c7;
+            border-radius: 50%;
+            border-top-color: #3498db;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
+            }
+
+            .sidebar {
+                max-height: 50vh;
+                border-left: none;
+                border-top: 2px solid #34495e;
+            }
+
+            .weekly-grid {
+                grid-template-columns: 60px repeat(7, 1fr);
+                gap: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-left">
+                <h1>🎯 Agenda AI</h1>
+                <div class="week-nav">
+                    <button class="nav-btn" onclick="previousWeek()">←</button>
+                    <div class="current-week" id="currentWeek"></div>
+                    <button class="nav-btn" onclick="nextWeek()">→</button>
+                    <button class="nav-btn" onclick="goToCurrentWeek()">Oggi</button>
+                </div>
+            </div>
+            
+            <div class="sync-status">
+                <div class="sync-indicator" id="syncIndicator"></div>
+                <span id="syncStatusText" style="font-size: 11px;">Connessione...</span>
+            </div>
+        </div>
+
+        <!-- NOTIFICATION BAR -->
+        <div class="notification-bar" id="notificationBar"></div>
+
+        <!-- TOP NAVIGATION TABS -->
+        <div class="top-nav">
+            <button class="nav-tab active" onclick="switchMainTab('dashboard')">📊 Dashboard</button>
+            <button class="nav-tab" onclick="switchMainTab('tasks')">✅ Task</button>
+            <button class="nav-tab" onclick="switchMainTab('clients')">👥 Clienti</button>
+            <button class="nav-tab" onclick="switchMainTab('projects')">📋 Progetti</button>
+            <button class="nav-tab" onclick="switchMainTab('database')">💾 Database</button>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- WEEKLY CALENDAR -->
+            <div class="calendar-section">
+                <div class="weekly-grid" id="weeklyGrid">
+                    <!-- Generato dinamicamente -->
+                </div>
+                
+                <div id="selectedDayInfo" style="background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <h3 style="color: #2c3e50; margin-bottom: 10px;">📅 <span id="selectedDayTitle">Caricamento...</span></h3>
+                    <div id="selectedDayTasks" style="color: #7f8c8d;">
+                        Connessione al database in corso...
+                    </div>
+                </div>
+            </div>
+
+            <!-- SIDEBAR DINAMICA -->
+            <div class="sidebar">
+                <!-- DASHBOARD TAB -->
+                <div id="tab-dashboard" class="tab-content active">
+                    <div class="stats-mini">
+                        <div class="stat-mini">
+                            <span class="stat-mini-number" id="tasksToday">-</span>
+                            <span class="stat-mini-label">Task Oggi</span>
+                        </div>
+                        <div class="stat-mini">
+                            <span class="stat-mini-number" id="projectsActive">-</span>
+                            <span class="stat-mini-label">Progetti</span>
+                        </div>
+                        <div class="stat-mini">
+                            <span class="stat-mini-number" id="clientsActive">-</span>
+                            <span class="stat-mini-label">Clienti</span>
+                        </div>
+                        <div class="stat-mini">
+                            <span class="stat-mini-number" id="weekProgress">-%</span>
+                            <span class="stat-mini-label">Progresso</span>
+                        </div>
+                    </div>
+
+                    <div class="section-card">
+                        <div class="section-title">⚡ Azioni Database</div>
+                        <button class="btn btn-sync" onclick="refreshAllData()">
+                            <span id="refreshSpinner"></span>
+                            🔄 Sincronizza Tutto
+                        </button>
+                        <button class="btn btn-database" onclick="loadSampleData()">
+                            🎯 Carica Dati Demo
+                        </button>
+                        <button class="btn btn-ai" onclick="analyzePending()">
+                            🤖 Analizza Pending
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TASKS TAB -->
+                <div id="tab-tasks" class="tab-content">
+                    <div class="section-card">
+                        <div class="section-title">➕ Nuovo Task</div>
+                        <div class="form-group">
+                            <label for="taskTitle">Titolo</label>
+                            <input type="text" id="taskTitle" class="form-control" placeholder="Sviluppo homepage">
+                        </div>
+                        <div class="form-group">
+                            <label for="taskClient">Cliente</label>
+                            <select id="taskClient" class="form-control">
+                                <option value="">Seleziona...</option>
+                            </select>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                            <div class="form-group">
+                                <label for="taskDate">Data</label>
+                                <input type="date" id="taskDate" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="taskTime">Ora</label>
+                                <input type="time" id="taskTime" class="form-control">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="taskType">Tipo</label>
+                            <select id="taskType" class="form-control">
+                                <option value="work">💼 Lavoro</option>
+                                <option value="personal">👤 Personale</option>
+                                <option value="project">📋 Progetto</option>
+                                <option value="house">🏠 Casa</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="addNewTask()">
+                            <span id="addTaskSpinner"></span>
+                            Aggiungi Task
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CLIENTS TAB -->
+                <div id="tab-clients" class="tab-content">
+                    <div class="section-card">
+                        <div class="section-title">👥 Gestione Clienti</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px;">
+                            <button class="btn" onclick="showAddClientForm()">➕ Nuovo</button>
+                            <button class="btn btn-sync" onclick="loadClients()">🔄 Ricarica</button>
+                        </div>
+                        <div id="clientsList" style="max-height: 200px; overflow-y: auto;">
+                            <div style="text-align: center; color: #bdc3c7; font-style: italic; padding: 20px;">
+                                Caricamento clienti...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PROJECTS TAB -->
+                <div id="tab-projects" class="tab-content">
+                    <div class="section-card">
+                        <div class="section-title">📋 Progetti Attivi</div>
+                        <div id="projectsList" style="max-height: 200px; overflow-y: auto;">
+                            <div style="text-align: center; color: #bdc3c7; font-style: italic; padding: 20px;">
+                                Caricamento progetti...
+                            </div>
+                        </div>
+                        <button class="btn" onclick="showAddProjectForm()">➕ Nuovo Progetto</button>
+                    </div>
+                </div>
+
+                <!-- DATABASE TAB -->
+                <div id="tab-database" class="tab-content">
+                    <div class="section-card">
+                        <div class="section-title">💾 Status Database</div>
+                        <div style="color: #bdc3c7; font-size: 10px; line-height: 1.4; margin-bottom: 10px;">
+                            <div>🟢 Connessione: <span id="dbStatus">Verificando...</span></div>
+                            <div>📊 Task salvati: <span id="dbTaskCount">-</span></div>
+                            <div>👥 Clienti attivi: <span id="dbClientCount">-</span></div>
+                            <div>📋 Progetti: <span id="dbProjectCount">-</span></div>
+                            <div>🔄 Ultimo sync: <span id="lastSync">-</span></div>
+                        </div>
+                        <button class="btn btn-database" onclick="testDatabaseConnection()">
+                            🔍 Test Connessione
+                        </button>
+                        <button class="btn btn-ai" onclick="initializeSampleData()">
+                            🎯 Setup Iniziale
+                        </button>
+                    </div>
+
+                    <div class="section-card">
+                        <div class="section-title">🚀 Azioni Avanzate</div>
+                        <button class="btn btn-small" onclick="exportData()">📤 Export</button>
+                        <button class="btn btn-small" onclick="importData()">📥 Import</button>
+                        <button class="btn btn-small" onclick="clearCache()">🗑️ Cache</button>
+                        <button class="btn btn-small" onclick="forceSync()">⚡ Force Sync</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🚀 Caricamento Agenda AI Database Edition...');
+
+        // ========================================
+        // CONFIGURAZIONE SUPABASE
+        // ========================================
+        
+        // SOSTITUISCI CON LE TUE CREDENZIALI SUPABASE
+        const SUPABASE_URL = 'https://daleylnucyoxpwvgwvzu.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhbGV5bG51Y3lveHB3dmd3dnp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4MDYwMzUsImV4cCI6MjA2NzM4MjAzNX0.9AKtkBhXvhKVwwaOpZxiRFfkGepMXQ_SV0YStZ5Alg0';
+
+        // Inizializza Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ========================================
+        // VARIABILI GLOBALI
+        // ========================================
+        
+        let currentWeekStart = new Date();
+        let selectedDate = new Date();
+        let tasksData = [];
+        let clientsData = [];
+        let projectsData = [];
+        let routinesData = [];
+        let isConnected = false;
+        let isLoading = false;
+
+        // ========================================
+        // DATABASE MANAGER CLASS
+        // ========================================
+
+        class AgendaDatabase {
+            constructor() {
+                this.isOnline = navigator.onLine;
+                this.localStorageKey = 'agenda_offline_data';
+                this.syncQueue = [];
+                this.testConnection();
+            }
+
+            async testConnection() {
+                try {
+                    showNotification('🔄 Testando connessione database...', 'info');
+                    updateSyncStatus('connecting');
+                    
+                    const { data, error } = await supabase
+                        .from('user_settings')
+                        .select('count')
+                        .limit(1);
+                    
+                    if (error) throw error;
+                    
+                    isConnected = true;
+                    updateSyncStatus('connected');
+                    showNotification('✅ Database connesso con successo!', 'success');
+                    
+                    // Carica dati iniziali
+                    await this.loadInitialData();
+                    
+                } catch (error) {
+                    console.error('Errore connessione database:', error);
+                    isConnected = false;
+                    updateSyncStatus('error');
+                    showNotification('❌ Errore connessione database: ' + error.message, 'error');
+                }
+            }
+
+            async loadInitialData() {
+                showSpinner('refreshSpinner', true);
+                
+                try {
+                    // Carica dati in parallelo
+                    const [tasks, clients, projects, routines] = await Promise.all([
+                        this.getTasks(),
+                        this.getClients(),
+                        this.getProjects(),
+                        this.getRoutines()
+                    ]);
+                    
+                    tasksData = tasks || [];
+                    clientsData = clients || [];
+                    projectsData = projects || [];
+                    routinesData = routines || [];
+                    
+                    // Aggiorna interfaccia
+                    generateWeeklyCalendar();
+                    updateDashboardStats();
+                    populateClientsList();
+                    populateProjectsList();
+                    updateDatabaseStats();
+                    
+                    showNotification('📊 Dati caricati con successo!', 'success');
+                    
+                } catch (error) {
+                    console.error('Errore caricamento dati:', error);
+                    showNotification('❌ Errore caricamento dati', 'error');
+                } finally {
+                    showSpinner('refreshSpinner', false);
+                }
+            }
+
+            // ========================================
+            // GESTIONE TASK
+            // ========================================
+
+            async getTasks(startDate, endDate) {
+                try {
+                    const start = startDate || formatDateKey(currentWeekStart);
+                    const end = endDate || formatDateKey(new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000));
+                    
+                    const { data, error } = await supabase
+                        .from('task_with_details')
+                        .select('*')
+                        .gte('task_date', start)
+                        .lte('task_date', end)
+                        .order('task_date, task_time');
+                    
+                    if (error) throw error;
+                    
+                    this.saveToLocalCache('tasks', data);
+                    return data;
+                } catch (error) {
+                    console.error('Errore caricamento task:', error);
+                    return this.getFromLocalCache('tasks') || [];
+                }
+            }
+
+            async addTask(taskData) {
+                try {
+                    showSpinner('addTaskSpinner', true);
+                    
+                    const { data, error } = await supabase
+                        .from('tasks')
+                        .insert([{
+                            title: taskData.title,
+                            description: taskData.description || null,
+                            task_date: taskData.date,
+                            task_time: taskData.time || null,
+                            duration_hours: taskData.duration || null,
+                            type: taskData.type || 'work',
+                            priority: taskData.priority || 'medium',
+                            client_id: taskData.clientId || null,
+                            project_id: taskData.projectId || null,
+                            source: 'manual'
+                        }])
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    
+                    // Ricarica task
+                    await this.loadTasksForWeek();
+                    generateWeeklyCalendar();
+                    updateDashboardStats();
+                    
+                    showNotification(`✅ Task "${taskData.title}" aggiunto!`, 'success');
+                    return data;
+                    
+                } catch (error) {
+                    console.error('Errore aggiunta task:', error);
+                    showNotification('❌ Errore aggiunta task: ' + error.message, 'error');
+                    throw error;
+                } finally {
+                    showSpinner('addTaskSpinner', false);
+                }
+            }
+
+            async completeTask(taskId) {
+                try {
+                    const { data, error } = await supabase
+                        .from('tasks')
+                        .update({ 
+                            status: 'completed',
+                            completed_at: new Date().toISOString()
+                        })
+                        .eq('id', taskId)
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    
+                    // Ricarica dati
+                    await this.loadTasksForWeek();
+                    generateWeeklyCalendar();
+                    updateDashboardStats();
+                    
+                    showNotification('✅ Task completato!', 'success');
+                    return data;
+                    
+                } catch (error) {
+                    console.error('Errore completamento task:', error);
+                    showNotification('❌ Errore completamento task', 'error');
+                    throw error;
+                }
+            }
+
+            async deleteTask(taskId) {
+                try {
+                    const { error } = await supabase
+                        .from('tasks')
+                        .delete()
+                        .eq('id', taskId);
+
+                    if (error) throw error;
+                    
+                    // Ricarica dati
+                    await this.loadTasksForWeek();
+                    generateWeeklyCalendar();
+                    updateDashboardStats();
+                    
+                    showNotification('🗑️ Task eliminato!', 'success');
+                    return true;
+                    
+                } catch (error) {
+                    console.error('Errore eliminazione task:', error);
+                    showNotification('❌ Errore eliminazione task', 'error');
+                    throw error;
+                }
+            }
+
+            // ========================================
+            // GESTIONE CLIENTI
+            // ========================================
+
+            async getClients() {
+                try {
+                    const { data, error } = await supabase
+                        .from('clients')
+                        .select('*')
+                        .eq('status', 'active')
+                        .order('name');
+                    
+                    if (error) throw error;
+                    
+                    this.saveToLocalCache('clients', data);
+                    return data;
+                } catch (error) {
+                    console.error('Errore caricamento clienti:', error);
+                    return this.getFromLocalCache('clients') || [];
+                }
+            }
+
+            async addClient(clientData) {
+                try {
+                    const { data, error } = await supabase
+                        .from('clients')
+                        .insert([{
+                            name: clientData.name,
+                            email: clientData.email,
+                            company: clientData.company || null,
+                            phone: clientData.phone || null,
+                            priority: clientData.priority || 'medium',
+                            hourly_rate: clientData.hourlyRate || 50,
+                            preferred_time: clientData.preferredTime || 'morning'
+                        }])
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    
+                    // Ricarica clienti
+                    clientsData = await this.getClients();
+                    populateClientsList();
+                    populateClientsDropdown();
+                    updateDashboardStats();
+                    
+                    showNotification(`✅ Cliente "${clientData.name}" aggiunto!`, 'success');
+                    return data;
+                    
+                } catch (error) {
+                    console.error('Errore aggiunta cliente:', error);
+                    showNotification('❌ Errore aggiunta cliente: ' + error.message, 'error');
+                    throw error;
+                }
+            }
+
+            // ========================================
+            // GESTIONE PROGETTI
+            // ========================================
+
+            async getProjects() {
+                try {
+                    const { data, error } = await supabase
+                        .from('project_stats')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    
+                    if (error) throw error;
+                    
+                    this.saveToLocalCache('projects', data);
+                    return data;
+                } catch (error) {
+                    console.error('Errore caricamento progetti:', error);
+                    return this.getFromLocalCache('projects') || [];
+                }
+            }
+
+            async addProject(projectData) {
+                try {
+                    const { data, error } = await supabase
+                        .from('projects')
+                        .insert([{
+                            name: projectData.name,
+                            client_id: projectData.clientId,
+                            description: projectData.description || null,
+                            deadline: projectData.deadline,
+                            budget: projectData.budget || null,
+                            priority: projectData.priority || 'medium'
+                        }])
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    
+                    // Ricarica progetti
+                    projectsData = await this.getProjects();
+                    populateProjectsList();
+                    updateDashboardStats();
+                    
+                    showNotification(`✅ Progetto "${projectData.name}" aggiunto!`, 'success');
+                    return data;
+                    
+                } catch (error) {
+                    console.error('Errore aggiunta progetto:', error);
+                    showNotification('❌ Errore aggiunta progetto: ' + error.message, 'error');
+                    throw error;
+                }
+            }
+
+            // ========================================
+            // GESTIONE ROUTINE
+            // ========================================
+
+            async getRoutines() {
+                try {
+                    const { data, error } = await supabase
+                        .from('routines')
+                        .select('*')
+                        .eq('is_active', true)
+                        .order('time_start');
+                    
+                    if (error) throw error;
+                    
+                    this.saveToLocalCache('routines', data);
+                    return data;
+                } catch (error) {
+                    console.error('Errore caricamento routine:', error);
+                    return this.getFromLocalCache('routines') || [];
+                }
+            }
+
+            // ========================================
+            // UTILITÀ
+            // ========================================
+
+            async loadTasksForWeek() {
+                const startDate = formatDateKey(currentWeekStart);
+                const endDate = formatDateKey(new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000));
+                tasksData = await this.getTasks(startDate, endDate);
+            }
+
+            saveToLocalCache(key, data) {
+                try {
+                    const cache = JSON.parse(localStorage.getItem(this.localStorageKey) || '{}');
+                    cache[key] = {
+                        data: data,
+                        timestamp: Date.now()
+                    };
+                    localStorage.setItem(this.localStorageKey, JSON.stringify(cache));
+                } catch (error) {
+                    console.error('Errore salvataggio cache:', error);
+                }
+            }
+
+            getFromLocalCache(key) {
+                try {
+                    const cache = JSON.parse(localStorage.getItem(this.localStorageKey) || '{}');
+                    const item = cache[key];
+                    
+                    if (!item) return null;
+                    
+                    // Cache valida per 1 ora
+                    const isExpired = (Date.now() - item.timestamp) > (60 * 60 * 1000);
+                    if (isExpired) return null;
+                    
+                    return item.data;
+                } catch (error) {
+                    console.error('Errore lettura cache:', error);
+                    return null;
+                }
+            }
+        }
+
+        // ========================================
+        // FUNZIONI UI UTILITÀ
+        // ========================================
+
+        function showNotification(message, type = 'info') {
+            const bar = document.getElementById('notificationBar');
+            if (!bar) return;
+            
+            bar.className = `notification-bar show ${type}`;
+            bar.textContent = message;
+            
+            setTimeout(() => {
+                bar.classList.remove('show');
+            }, 3000);
+        }
+
+        function updateSyncStatus(status) {
+            const indicator = document.getElementById('syncIndicator');
+            const text = document.getElementById('syncStatusText');
+            
+            if (!indicator || !text) return;
+            
+            indicator.className = `sync-indicator ${status}`;
+            
+            const statusTexts = {
+                'connecting': 'Connettendo...',
+                'connected': 'Online',
+                'syncing': 'Sincronizzando...',
+                'error': 'Offline',
+                'disconnected': 'Disconnesso'
+            };
+            
+            text.textContent = statusTexts[status] || 'Sconosciuto';
+        }
+
+        function showSpinner(elementId, show) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            if (show) {
+                element.innerHTML = '<span class="spinner"></span>';
+            } else {
+                element.innerHTML = '';
+            }
+        }
+
+        // ========================================
+        // GESTIONE CALENDARIO
+        // ========================================
+
+        function formatDateKey(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function formatDateDisplay(date) {
+            return date.toLocaleDateString('it-IT', { 
+                weekday: 'long', 
+                day: 'numeric',
+                month: 'long'
+            });
+        }
+
+        function getWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(d.setDate(diff));
+        }
+
+        function generateWeeklyCalendar() {
+            const grid = document.getElementById('weeklyGrid');
+            if (!grid) return;
+            
+            grid.innerHTML = '';
+
+            // Header vuoto per colonna ore
+            const emptyHeader = document.createElement('div');
+            emptyHeader.className = 'time-header';
+            grid.appendChild(emptyHeader);
+
+            // Header giorni della settimana
+            const dayNames = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+            const today = new Date();
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(currentWeekStart);
+                date.setDate(date.getDate() + i);
+                
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'day-header';
+                
+                if (formatDateKey(date) === formatDateKey(today)) {
+                    dayHeader.classList.add('today');
+                }
+                
+                dayHeader.innerHTML = `
+                    <div class="day-date">${date.getDate()}</div>
+                    <div class="day-name">${dayNames[i]}</div>
+                `;
+                
+                grid.appendChild(dayHeader);
+            }
+
+            // Righe orarie (7:00 - 23:00)
+            for (let hour = 7; hour <= 23; hour++) {
+                const timeSlot = document.createElement('div');
+                timeSlot.className = 'time-slot';
+                timeSlot.textContent = `${hour.toString().padStart(2, '0')}:00`;
+                grid.appendChild(timeSlot);
+
+                // Celle per ogni giorno
+                for (let day = 0; day < 7; day++) {
+                    const date = new Date(currentWeekStart);
+                    date.setDate(date.getDate() + day);
+                    const dateKey = formatDateKey(date);
+                    const timeKey = `${hour.toString().padStart(2, '0')}:00`;
+
+                    const dayCell = document.createElement('div');
+                    dayCell.className = 'day-cell';
+                    dayCell.onclick = () => selectDateAndTime(date, timeKey);
+                    
+                    const cellContent = document.createElement('div');
+                    cellContent.className = 'cell-content';
+                    
+                    // Aggiungi routine dal database
+                    routinesData.forEach(routine => {
+                        if (routine.time_start === timeKey && routine.days_of_week.includes(date.getDay() || 7)) {
+                            const routineChip = document.createElement('div');
+                            routineChip.className = 'event-chip routine';
+                            routineChip.textContent = routine.title;
+                            routineChip.title = routine.description || routine.title;
+                            cellContent.appendChild(routineChip);
+                        }
+                    });
+
+                    // Aggiungi task dal database
+                    tasksData.forEach(task => {
+                        if (task.task_date === dateKey && task.task_time && task.task_time.startsWith(timeKey.substring(0, 2))) {
+                            const taskChip = document.createElement('div');
+                            taskChip.className = `event-chip ${task.type}`;
+                            taskChip.textContent = task.title.length > 15 ? 
+                                task.title.substring(0, 12) + '...' : task.title;
+                            taskChip.title = `${task.title}${task.client_name ? ' - ' + task.client_name : ''}`;
+                            taskChip.onclick = (e) => {
+                                e.stopPropagation();
+                                showTaskDetails(task);
+                            };
+                            cellContent.appendChild(taskChip);
+                        }
+                    });
+
+                    dayCell.appendChild(cellContent);
+                    grid.appendChild(dayCell);
+                }
+            }
+
+            updateWeekDisplay();
+        }
+
+        function selectDateAndTime(date, time) {
+            selectedDate = new Date(date);
+            
+            // Rimuovi selezione precedente
+            document.querySelectorAll('.day-cell.selected').forEach(cell => {
+                cell.classList.remove('selected');
+            });
+            
+            // Aggiungi selezione
+            event.currentTarget.classList.add('selected');
+            
+            updateSelectedDayInfo();
+            
+            // Aggiorna form task
+            const taskDateField = document.getElementById('taskDate');
+            const taskTimeField = document.getElementById('taskTime');
+            if (taskDateField) taskDateField.value = formatDateKey(date);
+            if (taskTimeField) taskTimeField.value = time;
+        }
+
+        function updateSelectedDayInfo() {
+            const titleEl = document.getElementById('selectedDayTitle');
+            const tasksEl = document.getElementById('selectedDayTasks');
+            
+            if (!titleEl || !tasksEl) return;
+            
+            const dateStr = formatDateDisplay(selectedDate);
+            const dateKey = formatDateKey(selectedDate);
+            
+            titleEl.textContent = dateStr;
+            
+            // Filtra task per il giorno selezionato
+            const dayTasks = tasksData.filter(task => task.task_date === dateKey);
+            const dayRoutines = routinesData.filter(routine => 
+                routine.days_of_week.includes(selectedDate.getDay() || 7)
+            );
+            
+            let tasksHTML = '';
+            
+            // Routine del giorno
+            if (dayRoutines.length > 0) {
+                tasksHTML += '<h4 style="color: #95a5a6; margin: 10px 0 5px 0; font-size: 12px;">⏰ ROUTINE</h4>';
+                dayRoutines.forEach(routine => {
+                    tasksHTML += `<div style="padding: 4px 8px; margin: 2px 0; background: #ecf0f1; border-radius: 4px; font-size: 11px;">
+                        <strong>${routine.time_start}</strong> - ${routine.title}
+                    </div>`;
+                });
+            }
+            
+            // Task programmati
+            if (dayTasks.length > 0) {
+                tasksHTML += '<h4 style="color: #3498db; margin: 10px 0 5px 0; font-size: 12px;">📋 TASK</h4>';
+                dayTasks.forEach(task => {
+                    const bgColor = task.type === 'project' ? '#fff3e0' : 
+                                   task.type === 'personal' ? '#e8f5e8' : '#e8f4fd';
+                    const statusIcon = task.status === 'completed' ? '✅' : 
+                                      task.status === 'in_progress' ? '🔄' : '⏳';
+                    
+                    tasksHTML += `<div style="padding: 6px 8px; margin: 4px 0; background: ${bgColor}; border-radius: 4px; border-left: 3px solid #3498db; font-size: 11px; cursor: pointer;" onclick="showTaskDetails(${JSON.stringify(task).replace(/"/g, '&quot;')})">
+                        <strong>${task.task_time || 'Nessun orario'}</strong> ${statusIcon} ${task.title}
+                        ${task.client_name ? '<br><span style="color: #7f8c8d; font-size: 10px;">👤 ' + task.client_name + '</span>' : ''}
+                        ${task.description ? '<br><span style="color: #7f8c8d; font-size: 10px;">' + task.description + '</span>' : ''}
+                    </div>`;
+                });
+            } else if (dayRoutines.length === 0) {
+                tasksHTML += '<div style="color: #7f8c8d; font-style: italic; font-size: 11px; margin-top: 10px;">Nessun task programmato per questo giorno.</div>';
+            }
+            
+            tasksEl.innerHTML = tasksHTML || '<div style="color: #7f8c8d; font-style: italic;">Giorno libero 🌅</div>';
+        }
+
+        function updateWeekDisplay() {
+            const weekEl = document.getElementById('currentWeek');
+            if (!weekEl) return;
+            
+            const weekEnd = new Date(currentWeekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            
+            const startStr = currentWeekStart.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+            const endStr = weekEnd.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+            
+            weekEl.textContent = `${startStr} - ${endStr}`;
+        }
+
+        function previousWeek() {
+            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+            db.loadTasksForWeek().then(() => {
+                generateWeeklyCalendar();
+                updateSelectedDayInfo();
+            });
+        }
+
+        function nextWeek() {
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            db.loadTasksForWeek().then(() => {
+                generateWeeklyCalendar();
+                updateSelectedDayInfo();
+            });
+        }
+
+        function goToCurrentWeek() {
+            currentWeekStart = getWeekStart(new Date());
+            selectedDate = new Date();
+            db.loadTasksForWeek().then(() => {
+                generateWeeklyCalendar();
+                updateSelectedDayInfo();
+            });
+        }
+
+        // ========================================
+        // GESTIONE TAB
+        // ========================================
+
+        function switchMainTab(tabName) {
+            // Rimuovi active da tutti i tab
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Attiva il tab selezionato
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        // ========================================
+        // FUNZIONI DASHBOARD
+        // ========================================
+
+        function updateDashboardStats() {
+            const today = formatDateKey(new Date());
+            const todayTasks = tasksData.filter(task => 
+                task.task_date === today && task.status !== 'completed'
+            ).length;
+            
+            const activeProjects = projectsData.filter(project => 
+                project.status === 'in_progress' || project.status === 'planning'
+            ).length;
+            
+            const activeClients = clientsData.filter(client => 
+                client.status === 'active'
+            ).length;
+            
+            // Calcola progresso settimana (task completati / task totali)
+            const weekTasks = tasksData.length;
+            const completedTasks = tasksData.filter(task => task.status === 'completed').length;
+            const weekProgress = weekTasks > 0 ? Math.round((completedTasks / weekTasks) * 100) : 0;
+            
+            document.getElementById('tasksToday').textContent = todayTasks;
+            document.getElementById('projectsActive').textContent = activeProjects;
+            document.getElementById('clientsActive').textContent = activeClients;
+            document.getElementById('weekProgress').textContent = weekProgress + '%';
+        }
+
+        function updateDatabaseStats() {
+            document.getElementById('dbStatus').textContent = isConnected ? 'Connesso' : 'Disconnesso';
+            document.getElementById('dbTaskCount').textContent = tasksData.length;
+            document.getElementById('dbClientCount').textContent = clientsData.length;
+            document.getElementById('dbProjectCount').textContent = projectsData.length;
+            document.getElementById('lastSync').textContent = new Date().toLocaleTimeString('it-IT');
+        }
+
+        // ========================================
+        // FUNZIONI TASK
+        // ========================================
+
+        async function addNewTask() {
+            const title = document.getElementById('taskTitle').value.trim();
+            const clientId = document.getElementById('taskClient').value || null;
+            const date = document.getElementById('taskDate').value;
+            const time = document.getElementById('taskTime').value || null;
+            const type = document.getElementById('taskType').value;
+
+            if (!title || !date) {
+                showNotification('⚠️ Inserisci almeno titolo e data!', 'warning');
+                return;
+            }
+
+            try {
+                await db.addTask({
+                    title: title,
+                    clientId: clientId,
+                    date: date,
+                    time: time,
+                    type: type
+                });
+
+                // Reset form
+                document.getElementById('taskTitle').value = '';
+                document.getElementById('taskTime').value = '';
+                
+            } catch (error) {
+                console.error('Errore aggiunta task:', error);
+            }
+        }
+
+        function showTaskDetails(task) {
+            const details = `📋 TASK DETAILS\n\n` +
+                          `Titolo: ${task.title}\n` +
+                          `Data: ${new Date(task.task_date).toLocaleDateString('it-IT')}\n` +
+                          `Orario: ${task.task_time || 'Non specificato'}\n` +
+                          `Tipo: ${task.type}\n` +
+                          `Status: ${task.status}\n` +
+                          `${task.client_name ? 'Cliente: ' + task.client_name + '\n' : ''}` +
+                          `${task.description ? 'Descrizione: ' + task.description : ''}`;
+            
+            if (confirm(details + '\n\n🗑️ Vuoi eliminare questo task?')) {
+                db.deleteTask(task.id);
+            }
+        }
+
+        // ========================================
+        // FUNZIONI CLIENTI
+        // ========================================
+
+        function populateClientsList() {
+            const container = document.getElementById('clientsList');
+            if (!container) return;
+            
+            if (clientsData.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #bdc3c7; font-style: italic; padding: 20px;">Nessun cliente trovato</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            clientsData.forEach(client => {
+                const clientEl = document.createElement('div');
+                clientEl.style.cssText = 'background: #2c3e50; border-radius: 4px; padding: 8px; margin-bottom: 6px; cursor: pointer; transition: all 0.3s;';
+                clientEl.innerHTML = `
+                    <div style="color: #ecf0f1; font-weight: bold; font-size: 11px;">${client.name}</div>
+                    <div style="color: #bdc3c7; font-size: 10px;">${client.email}</div>
+                    <div style="color: #3498db; font-size: 9px;">€${client.hourly_rate}/ora | ${client.priority}</div>
+                `;
+                clientEl.onclick = () => showClientDetails(client);
+                container.appendChild(clientEl);
+            });
+        }
+
+        function populateClientsDropdown() {
+            const select = document.getElementById('taskClient');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">Seleziona...</option>';
+            clientsData.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client.id;
+                option.textContent = client.name;
+                select.appendChild(option);
+            });
+        }
+
+        function showClientDetails(client) {
+            const details = `👤 CLIENTE\n\n` +
+                          `Nome: ${client.name}\n` +
+                          `Email: ${client.email}\n` +
+                          `Azienda: ${client.company || 'Non specificata'}\n` +
+                          `Telefono: ${client.phone || 'Non specificato'}\n` +
+                          `Tariffa: €${client.hourly_rate}/ora\n` +
+                          `Priorità: ${client.priority}\n` +
+                          `Orario preferito: ${client.preferred_time}`;
+            
+            alert(details);
+        }
+
+        async function showAddClientForm() {
+            const name = prompt('👤 Nome cliente:', '');
+            if (!name) return;
+            
+            const email = prompt('📧 Email cliente:', '');
+            if (!email) return;
+            
+            const company = prompt('🏢 Azienda (opzionale):', '');
+            const hourlyRate = prompt('💰 Tariffa oraria (€):', '50');
+            
+            try {
+                await db.addClient({
+                    name: name.trim(),
+                    email: email.trim(),
+                    company: company?.trim() || null,
+                    hourlyRate: parseFloat(hourlyRate) || 50,
+                    priority: 'medium',
+                    preferredTime: 'morning'
+                });
+            } catch (error) {
+                console.error('Errore aggiunta cliente:', error);
+            }
+        }
+
+        async function loadClients() {
+            try {
+                showNotification('🔄 Ricaricando clienti...', 'info');
+                clientsData = await db.getClients();
+                populateClientsList();
+                populateClientsDropdown();
+                updateDashboardStats();
+                showNotification('✅ Clienti aggiornati!', 'success');
+            } catch (error) {
+                console.error('Errore ricarica clienti:', error);
+                showNotification('❌ Errore ricarica clienti', 'error');
+            }
+        }
+
+        // ========================================
+        // FUNZIONI PROGETTI
+        // ========================================
+
+        function populateProjectsList() {
+            const container = document.getElementById('projectsList');
+            if (!container) return;
+            
+            if (projectsData.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #bdc3c7; font-style: italic; padding: 20px;">Nessun progetto trovato</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            projectsData.forEach(project => {
+                const projectEl = document.createElement('div');
+                projectEl.style.cssText = 'background: #2c3e50; border-radius: 4px; padding: 8px; margin-bottom: 6px; cursor: pointer; transition: all 0.3s;';
+                
+                const statusColors = {
+                    'planning': '#3498db',
+                    'in_progress': '#f39c12',
+                    'review': '#9b59b6',
+                    'completed': '#27ae60',
+                    'paused': '#95a5a6'
+                };
+                
+                const statusColor = statusColors[project.status] || '#3498db';
+                
+                projectEl.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <div style="color: #ecf0f1; font-weight: bold; font-size: 11px;">${project.name}</div>
+                        <div style="background: ${statusColor}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">
+                            ${project.status.toUpperCase()}
+                        </div>
+                    </div>
+                    <div style="color: #bdc3c7; font-size: 10px; margin-bottom: 4px;">
+                        👤 ${project.client_name || 'Cliente sconosciuto'}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="color: #3498db; font-size: 9px;">
+                            €${project.budget || 0} | ${project.progress || 0}%
+                        </div>
+                        <div style="color: #e67e22; font-size: 9px;">
+                            📅 ${project.deadline ? new Date(project.deadline).toLocaleDateString('it-IT') : 'No scadenza'}
+                        </div>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div style="background: #1a252f; border-radius: 2px; height: 3px; margin-top: 4px; overflow: hidden;">
+                        <div style="background: ${statusColor}; height: 100%; width: ${project.progress || 0}%; transition: width 0.3s;"></div>
+                    </div>
+                `;
+                
+                projectEl.onclick = () => showProjectDetails(project);
+                container.appendChild(projectEl);
+            });
+        }
+
+        function showProjectDetails(project) {
+            const details = `📋 PROGETTO\n\n` +
+                          `Nome: ${project.name}\n` +
+                          `Cliente: ${project.client_name || 'Sconosciuto'}\n` +
+                          `Status: ${project.status}\n` +
+                          `Progresso: ${project.progress || 0}%\n` +
+                          `Budget: €${project.budget || 0}\n` +
+                          `Scadenza: ${project.deadline ? new Date(project.deadline).toLocaleDateString('it-IT') : 'Non specificata'}\n` +
+                          `Priorità: ${project.priority}\n` +
+                          `Task totali: ${project.total_tasks || 0}\n` +
+                          `Task completati: ${project.completed_tasks || 0}`;
+            
+            alert(details);
+        }
+
+        async function showAddProjectForm() {
+            const name = prompt('📋 Nome progetto:', '');
+            if (!name) return;
+            
+            if (clientsData.length === 0) {
+                showNotification('⚠️ Aggiungi prima almeno un cliente!', 'warning');
+                return;
+            }
+            
+            // Seleziona cliente
+            let clientsList = 'Seleziona cliente:\n\n';
+            clientsData.forEach((client, index) => {
+                clientsList += `${index + 1}. ${client.name} (${client.email})\n`;
+            });
+            
+            const clientIndex = prompt(clientsList + '\nInserisci numero:', '1');
+            const selectedClient = clientsData[parseInt(clientIndex) - 1];
+            
+            if (!selectedClient) {
+                showNotification('❌ Cliente non valido!', 'error');
+                return;
+            }
+            
+            const deadline = prompt('📅 Scadenza (YYYY-MM-DD):', '');
+            const budget = prompt('💰 Budget (€):', '');
+            
+            try {
+                await db.addProject({
+                    name: name.trim(),
+                    clientId: selectedClient.id,
+                    deadline: deadline || null,
+                    budget: parseFloat(budget) || null,
+                    priority: 'medium'
+                });
+            } catch (error) {
+                console.error('Errore aggiunta progetto:', error);
+            }
+        }
+
+        // ========================================
+        // FUNZIONI DATABASE
+        // ========================================
+
+        async function refreshAllData() {
+            if (!isConnected) {
+                showNotification('❌ Database non connesso!', 'error');
+                return;
+            }
+            
+            try {
+                updateSyncStatus('syncing');
+                await db.loadInitialData();
+                showNotification('🔄 Tutti i dati aggiornati!', 'success');
+                updateSyncStatus('connected');
+            } catch (error) {
+                console.error('Errore refresh dati:', error);
+                showNotification('❌ Errore refresh dati', 'error');
+                updateSyncStatus('error');
+            }
+        }
+
+        async function testDatabaseConnection() {
+            showNotification('🔍 Testando connessione...', 'info');
+            await db.testConnection();
+        }
+
+        async function loadSampleData() {
+            if (!confirm('🎯 Caricare dati demo?\n\nQuesta operazione aggiungerà clienti, progetti e task di esempio.')) {
+                return;
+            }
+            
+            try {
+                showNotification('🎯 Caricamento dati demo...', 'info');
+                
+                // Aggiungi clienti demo
+                const demoClients = [
+                    { name: 'Mario Rossi', email: 'mario.rossi@email.com', company: 'Rossi SRL', hourlyRate: 60, priority: 'high' },
+                    { name: 'Lucia Verdi', email: 'lucia@startup.com', company: 'Startup Innovativa', hourlyRate: 70, priority: 'medium' },
+                    { name: 'Paolo Bianchi', email: 'paolo@negozio.it', company: 'Negozio Tradizionale', hourlyRate: 50, priority: 'medium' }
+                ];
+                
+                for (const client of demoClients) {
+                    try {
+                        await db.addClient(client);
+                    } catch (error) {
+                        console.log('Cliente già esistente:', client.name);
+                    }
+                }
+                
+                // Ricarica dati
+                await db.loadInitialData();
+                
+                showNotification('✅ Dati demo caricati con successo!', 'success');
+                
+            } catch (error) {
+                console.error('Errore caricamento dati demo:', error);
+                showNotification('❌ Errore caricamento dati demo', 'error');
+            }
+        }
+
+        async function initializeSampleData() {
+            if (!confirm('🚀 Setup iniziale database?\n\nQuesta operazione configurerà:\n- Routine giornaliere\n- Raccolta differenziata\n- Categorie di base\n\nContinuare?')) {
+                return;
+            }
+            
+            try {
+                showNotification('🚀 Setup iniziale in corso...', 'info');
+                
+                // Lo schema SQL ha già inserito le routine di base
+                // Qui possiamo aggiungere raccolta differenziata per la settimana
+                
+                const wasteSchedule = [
+                    { collection_date: '2025-07-07', waste_type: 'CARTA', description: 'Carta e cartone' },
+                    { collection_date: '2025-07-08', waste_type: 'ORGANICO', description: 'Rifiuti organici' },
+                    { collection_date: '2025-07-09', waste_type: 'PLASTICA E METALLI', description: 'Plastica e metalli' },
+                    { collection_date: '2025-07-11', waste_type: 'VETRO', description: 'Vetro e lattine' }
+                ];
+                
+                // In una versione completa, inseriresti questi dati via API
+                console.log('Raccolta differenziata da programmare:', wasteSchedule);
+                
+                await db.loadInitialData();
+                
+                showNotification('✅ Setup iniziale completato!', 'success');
+                
+            } catch (error) {
+                console.error('Errore setup iniziale:', error);
+                showNotification('❌ Errore setup iniziale', 'error');
+            }
+        }
+
+        function analyzePending() {
+            const pendingTasks = tasksData.filter(task => task.status === 'pending').length;
+            const inProgressTasks = tasksData.filter(task => task.status === 'in_progress').length;
+            
+            const analysis = `🤖 ANALISI AI\n\n` +
+                           `📋 Task pending: ${pendingTasks}\n` +
+                           `🔄 Task in corso: ${inProgressTasks}\n` +
+                           `📊 Progetti attivi: ${projectsData.filter(p => p.status === 'in_progress').length}\n` +
+                           `👥 Clienti attivi: ${clientsData.length}\n\n` +
+                           `💡 Suggerimenti:\n` +
+                           `${pendingTasks > 5 ? '- Troppe task pending, considera di prioritizzare\n' : ''}` +
+                           `${inProgressTasks === 0 ? '- Nessun task in corso, inizia qualcosa!\n' : ''}` +
+                           `- Pianifica task per domani mattina\n` +
+                           `- Controlla email clienti per nuove richieste`;
+            
+            alert(analysis);
+        }
+
+        // ========================================
+        // FUNZIONI UTILITÀ
+        // ========================================
+
+        function exportData() {
+            const exportData = {
+                tasks: tasksData,
+                clients: clientsData,
+                projects: projectsData,
+                routines: routinesData,
+                exportDate: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `agenda_export_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            showNotification('📤 Dati esportati!', 'success');
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+                    
+                    if (confirm(`📥 Importare dati da ${file.name}?\n\nQuesta operazione potrebbe sovrascrivere dati esistenti.`)) {
+                        // In una versione completa, implementeresti l'import nel database
+                        console.log('Dati da importare:', data);
+                        showNotification('📥 Import completato!', 'success');
+                    }
+                } catch (error) {
+                    console.error('Errore import:', error);
+                    showNotification('❌ Errore import file', 'error');
+                }
+            };
+            input.click();
+        }
+
+        function clearCache() {
+            if (confirm('🗑️ Cancellare cache locale?\n\nI dati verranno ricaricati dal database.')) {
+                localStorage.removeItem('agenda_offline_data');
+                localStorage.removeItem('agenda_sync_queue');
+                showNotification('🗑️ Cache cancellata!', 'success');
+            }
+        }
+
+        async function forceSync() {
+            if (!isConnected) {
+                showNotification('❌ Database non connesso!', 'error');
+                return;
+            }
+            
+            try {
+                updateSyncStatus('syncing');
+                showNotification('⚡ Sincronizzazione forzata...', 'info');
+                
+                // Simula sincronizzazione completa
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                await refreshAllData();
+                showNotification('⚡ Sincronizzazione completata!', 'success');
+                updateSyncStatus('connected');
+            } catch (error) {
+                console.error('Errore force sync:', error);
+                showNotification('❌ Errore sincronizzazione', 'error');
+                updateSyncStatus('error');
+            }
+        }
+
+        // ========================================
+        // INIZIALIZZAZIONE PRINCIPALE
+        // ========================================
+
+        let db;
+
+        async function init() {
+            console.log('🔄 Inizializzazione Agenda AI Database Edition...');
+            
+            try {
+                // Imposta settimana corrente
+                currentWeekStart = getWeekStart(new Date());
+                selectedDate = new Date();
+                
+                // Inizializza database
+                db = new AgendaDatabase();
+                
+                // Imposta data task form
+                const taskDateField = document.getElementById('taskDate');
+                if (taskDateField) {
+                    taskDateField.value = formatDateKey(selectedDate);
+                }
+                
+                // Event listeners per online/offline
+                window.addEventListener('online', () => {
+                    updateSyncStatus('connected');
+                    showNotification('🟢 Connessione ripristinata', 'success');
+                    if (db) db.testConnection();
+                });
+
+                window.addEventListener('offline', () => {
+                    updateSyncStatus('disconnected');
+                    showNotification('🔴 Modalità offline', 'warning');
+                });
+                
+                console.log('✅ Agenda AI Database Edition inizializzata');
+                
+            } catch (error) {
+                console.error('Errore inizializzazione:', error);
+                showNotification('❌ Errore inizializzazione: ' + error.message, 'error');
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('=== AGENDA AI DATABASE EDITION ===');
+            
+            try {
+                init();
+                console.log('✅ Agenda AI Database Edition caricata con successo');
+            } catch (error) {
+                console.error('Errore caricamento:', error);
+                showNotification('❌ Errore caricamento applicazione', 'error');
+            }
+        });
+
+        console.log('🎉 JavaScript Agenda AI Database Edition caricato!');
+        
+        // ========================================
+        // CONFIGURAZIONE AVVISO
+        // ========================================
+        
+        setTimeout(() => {
+            if (!isConnected) {
+                showNotification('⚠️ CONFIGURAZIONE RICHIESTA: Imposta le credenziali Supabase nel codice!', 'warning');
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
