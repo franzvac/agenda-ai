@@ -411,6 +411,246 @@
         .btn-ai { background: #e67e22; }
         .btn-ai:hover { background: #d35400; }
 
+        /* PULSANTI ICONE AZIONI */
+        .action-buttons {
+            display: flex;
+            gap: 4px;
+            margin-top: 6px;
+            justify-content: flex-end;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            padding: 4px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            color: #bdc3c7;
+        }
+
+        .icon-btn:hover {
+            transform: scale(1.1);
+            background: rgba(255,255,255,0.1);
+        }
+
+        .icon-btn.delete {
+            color: #e74c3c;
+        }
+
+        .icon-btn.edit {
+            color: #3498db;
+        }
+
+        .icon-btn.delete:hover {
+            background: rgba(231, 76, 60, 0.1);
+            color: #c0392b;
+        }
+
+        .icon-btn.edit:hover {
+            background: rgba(52, 152, 219, 0.1);
+            color: #2980b9;
+        }
+
+        /* MODAL DI CONFERMA ELIMINAZIONE */
+        .delete-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .delete-modal-content {
+            background: white;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 100%;
+            position: relative;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            animation: deleteModalSlideIn 0.3s ease-out;
+            overflow: hidden;
+        }
+
+        @keyframes deleteModalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8) translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .delete-modal-header {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            padding: 20px 25px;
+            position: relative;
+        }
+
+        .delete-modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 20px;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .delete-modal-close:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(90deg);
+        }
+
+        .delete-modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 0 8px 0;
+            padding-right: 50px;
+        }
+
+        .delete-modal-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .delete-modal-body {
+            padding: 25px;
+        }
+
+        .delete-warning {
+            background: #fdf2f2;
+            border: 1px solid #fcdada;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .delete-warning-icon {
+            color: #e74c3c;
+            font-size: 18px;
+            margin-top: 2px;
+        }
+
+        .delete-warning-text {
+            flex: 1;
+            color: #721c24;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .delete-item-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .delete-item-name {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .delete-item-details {
+            color: #7f8c8d;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .delete-confirmation {
+            margin-bottom: 20px;
+        }
+
+        .delete-confirmation label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        .delete-confirmation input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+
+        .delete-modal-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .delete-modal-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .delete-modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-cancel {
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+
+        .btn-cancel:hover {
+            background: #d5dbdb;
+        }
+
+        .btn-delete {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c0392b;
+        }
+
+        .btn-delete:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         /* LOADING SPINNER */
         .spinner {
             display: inline-block;
@@ -447,6 +687,25 @@
             .weekly-grid {
                 grid-template-columns: 60px repeat(7, 1fr);
                 gap: 0;
+            }
+            
+            .delete-modal-content {
+                margin: 10px;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+            
+            .delete-modal-actions {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .delete-modal-header {
+                padding: 15px 20px;
+            }
+            
+            .delete-modal-body {
+                padding: 20px;
             }
         }
     </style>
@@ -637,6 +896,53 @@
         </div>
     </div>
 
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div class="delete-modal" id="deleteModal">
+        <div class="delete-modal-content">
+            <div class="delete-modal-header">
+                <button class="delete-modal-close" onclick="closeDeleteModal()">×</button>
+                <h2 class="delete-modal-title" id="deleteModalTitle">Elimina Elemento</h2>
+                <p class="delete-modal-subtitle" id="deleteModalSubtitle">Questa azione non può essere annullata</p>
+            </div>
+            
+            <div class="delete-modal-body">
+                <!-- Warning -->
+                <div class="delete-warning">
+                    <div class="delete-warning-icon">⚠️</div>
+                    <div class="delete-warning-text" id="deleteWarningText">
+                        Questa azione eliminerà permanentemente l'elemento selezionato.
+                    </div>
+                </div>
+                
+                <!-- Item Info -->
+                <div class="delete-item-info">
+                    <div class="delete-item-name" id="deleteItemName">Nome Elemento</div>
+                    <div class="delete-item-details" id="deleteItemDetails">
+                        Dettagli elemento
+                    </div>
+                </div>
+                
+                <!-- Confirmation Checkbox -->
+                <div class="delete-confirmation">
+                    <label>
+                        <input type="checkbox" id="deleteConfirmCheckbox" onchange="toggleDeleteConfirmation()">
+                        <span>Confermo di voler eliminare definitivamente questo elemento</span>
+                    </label>
+                </div>
+                
+                <!-- Actions -->
+                <div class="delete-modal-actions">
+                    <button class="delete-modal-btn btn-cancel" onclick="closeDeleteModal()">
+                        ❌ Annulla
+                    </button>
+                    <button class="delete-modal-btn btn-delete" id="confirmDeleteBtn" onclick="confirmDelete()" disabled>
+                        🗑️ Elimina Definitivamente
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         console.log('🚀 Caricamento Agenda AI Database Edition...');
 
@@ -663,6 +969,10 @@
         let routinesData = [];
         let isConnected = false;
         let isLoading = false;
+
+        // Variabili per modal eliminazione
+        let currentDeleteItem = null;
+        let currentDeleteType = null;
 
         // ========================================
         // DATABASE MANAGER CLASS
@@ -1026,6 +1336,186 @@
                     console.error('Errore lettura cache:', error);
                     return null;
                 }
+            }
+        }
+
+        // ========================================
+        // FUNZIONI ELIMINAZIONE
+        // ========================================
+
+        // Mostra modal di conferma eliminazione
+        function showDeleteModal(item, type) {
+            currentDeleteItem = item;
+            currentDeleteType = type;
+            
+            const modal = document.getElementById('deleteModal');
+            const title = document.getElementById('deleteModalTitle');
+            const subtitle = document.getElementById('deleteModalSubtitle');
+            const itemName = document.getElementById('deleteItemName');
+            const itemDetails = document.getElementById('deleteItemDetails');
+            const warningText = document.getElementById('deleteWarningText');
+            const confirmCheckbox = document.getElementById('deleteConfirmCheckbox');
+            const deleteBtn = document.getElementById('confirmDeleteBtn');
+            
+            // Reset checkbox
+            confirmCheckbox.checked = false;
+            deleteBtn.disabled = true;
+            
+            if (type === 'client') {
+                title.textContent = 'Elimina Cliente';
+                subtitle.textContent = 'Questa azione non può essere annullata';
+                itemName.textContent = item.name;
+                itemDetails.innerHTML = `
+                    <div>📧 Email: ${item.email}</div>
+                    <div>🏢 Azienda: ${item.company || 'Non specificata'}</div>
+                    <div>💰 Tariffa: €${item.hourly_rate}/ora</div>
+                    <div>📊 Priorità: ${item.priority}</div>
+                `;
+                warningText.innerHTML = `
+                    <strong>Attenzione!</strong><br>
+                    Eliminando questo cliente verranno anche:
+                    <ul style="margin: 8px 0 0 16px; font-size: 12px;">
+                        <li>Rimossi tutti i progetti associati</li>
+                        <li>Cancellati tutti i task collegati</li>
+                        <li>Persi tutti i dati storici</li>
+                    </ul>
+                `;
+            } else if (type === 'project') {
+                title.textContent = 'Elimina Progetto';
+                subtitle.textContent = 'Questa azione non può essere annullata';
+                itemName.textContent = item.name;
+                itemDetails.innerHTML = `
+                    <div>👤 Cliente: ${item.client_name || 'Sconosciuto'}</div>
+                    <div>📊 Progresso: ${item.progress || 0}%</div>
+                    <div>💰 Budget: €${item.budget || 0}</div>
+                    <div>📅 Scadenza: ${item.deadline ? new Date(item.deadline).toLocaleDateString('it-IT') : 'Non specificata'}</div>
+                    <div>🔄 Status: ${item.status}</div>
+                `;
+                warningText.innerHTML = `
+                    <strong>Attenzione!</strong><br>
+                    Eliminando questo progetto verranno anche:
+                    <ul style="margin: 8px 0 0 16px; font-size: 12px;">
+                        <li>Cancellati tutti i task associati</li>
+                        <li>Persi tutti i dati di progresso</li>
+                        <li>Rimossa la correlazione con le email</li>
+                    </ul>
+                `;
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        // Chiude modal
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+            currentDeleteItem = null;
+            currentDeleteType = null;
+        }
+
+        // Gestione checkbox conferma
+        function toggleDeleteConfirmation() {
+            const checkbox = document.getElementById('deleteConfirmCheckbox');
+            const deleteBtn = document.getElementById('confirmDeleteBtn');
+            deleteBtn.disabled = !checkbox.checked;
+        }
+
+        // Conferma eliminazione
+        async function confirmDelete() {
+            if (!currentDeleteItem || !currentDeleteType) return;
+            
+            const deleteBtn = document.getElementById('confirmDeleteBtn');
+            const originalText = deleteBtn.innerHTML;
+            
+            try {
+                // Mostra loading
+                deleteBtn.innerHTML = '<span class="spinner"></span> Eliminando...';
+                deleteBtn.disabled = true;
+                
+                if (currentDeleteType === 'client') {
+                    await deleteClient(currentDeleteItem.id);
+                } else if (currentDeleteType === 'project') {
+                    await deleteProject(currentDeleteItem.id);
+                }
+                
+                // Chiudi modal
+                closeDeleteModal();
+                
+                // Mostra notifica successo
+                showNotification(`✅ ${currentDeleteType === 'client' ? 'Cliente' : 'Progetto'} eliminato con successo!`, 'success');
+                
+            } catch (error) {
+                console.error('Errore eliminazione:', error);
+                showNotification(`❌ Errore durante l'eliminazione: ${error.message}`, 'error');
+                
+                // Ripristina pulsante
+                deleteBtn.innerHTML = originalText;
+                deleteBtn.disabled = false;
+            }
+        }
+
+        // Elimina cliente dal database
+        async function deleteClient(clientId) {
+            try {
+                // Prima elimina tutti i progetti del cliente
+                const { error: projectsError } = await supabase
+                    .from('projects')
+                    .delete()
+                    .eq('client_id', clientId);
+                
+                if (projectsError) throw projectsError;
+                
+                // Poi elimina tutti i task del cliente
+                const { error: tasksError } = await supabase
+                    .from('tasks')
+                    .delete()
+                    .eq('client_id', clientId);
+                
+                if (tasksError) throw tasksError;
+                
+                // Infine elimina il cliente
+                const { error: clientError } = await supabase
+                    .from('clients')
+                    .delete()
+                    .eq('id', clientId);
+                
+                if (clientError) throw clientError;
+                
+                // Ricarica dati
+                await refreshAllData();
+                
+                return true;
+            } catch (error) {
+                console.error('Errore eliminazione cliente:', error);
+                throw error;
+            }
+        }
+
+        // Elimina progetto dal database
+        async function deleteProject(projectId) {
+            try {
+                // Prima elimina tutti i task del progetto
+                const { error: tasksError } = await supabase
+                    .from('tasks')
+                    .delete()
+                    .eq('project_id', projectId);
+                
+                if (tasksError) throw tasksError;
+                
+                // Poi elimina il progetto
+                const { error: projectError } = await supabase
+                    .from('projects')
+                    .delete()
+                    .eq('id', projectId);
+                
+                if (projectError) throw projectError;
+                
+                // Ricarica dati
+                await refreshAllData();
+                
+                return true;
+            } catch (error) {
+                console.error('Errore eliminazione progetto:', error);
+                throw error;
             }
         }
 
@@ -1413,13 +1903,32 @@
             container.innerHTML = '';
             clientsData.forEach(client => {
                 const clientEl = document.createElement('div');
-                clientEl.style.cssText = 'background: #2c3e50; border-radius: 4px; padding: 8px; margin-bottom: 6px; cursor: pointer; transition: all 0.3s;';
+                clientEl.style.cssText = 'background: #2c3e50; border-radius: 4px; padding: 8px; margin-bottom: 6px; transition: all 0.3s; position: relative;';
                 clientEl.innerHTML = `
-                    <div style="color: #ecf0f1; font-weight: bold; font-size: 11px;">${client.name}</div>
-                    <div style="color: #bdc3c7; font-size: 10px;">${client.email}</div>
-                    <div style="color: #3498db; font-size: 9px;">€${client.hourly_rate}/ora | ${client.priority}</div>
+                    <div style="color: #ecf0f1; font-weight: bold; font-size: 11px; margin-bottom: 2px;">${client.name}</div>
+                    <div style="color: #bdc3c7; font-size: 10px; margin-bottom: 2px;">${client.email}</div>
+                    <div style="color: #3498db; font-size: 9px; margin-bottom: 4px;">€${client.hourly_rate}/ora | ${client.priority}</div>
+                    
+                    <div class="action-buttons">
+                        <button class="icon-btn edit" onclick="editClient('${client.id}')" title="Modifica cliente">
+                            ✏️
+                        </button>
+                        <button class="icon-btn delete" onclick="showDeleteModal(${JSON.stringify(client).replace(/"/g, '&quot;')}, 'client')" title="Elimina cliente">
+                            🗑️
+                        </button>
+                    </div>
                 `;
-                clientEl.onclick = () => showClientDetails(client);
+                
+                // Hover effect
+                clientEl.onmouseenter = () => {
+                    clientEl.style.background = '#34495e';
+                    clientEl.style.transform = 'translateX(3px)';
+                };
+                clientEl.onmouseleave = () => {
+                    clientEl.style.background = '#2c3e50';
+                    clientEl.style.transform = 'translateX(0)';
+                };
+                
                 container.appendChild(clientEl);
             });
         }
@@ -1504,7 +2013,7 @@
             container.innerHTML = '';
             projectsData.forEach(project => {
                 const projectEl = document.createElement('div');
-                projectEl.style.cssText = 'background: #2c3e50; border-radius: 4px; padding: 8px; margin-bottom: 6px; cursor: pointer; transition: all 0.3s;';
+                projectEl.style.cssText = 'background: #2c3e50; border-radius: 4px; padding: 8px; margin-bottom: 6px; transition: all 0.3s; position: relative;';
                 
                 const statusColors = {
                     'planning': '#3498db',
@@ -1526,7 +2035,7 @@
                     <div style="color: #bdc3c7; font-size: 10px; margin-bottom: 4px;">
                         👤 ${project.client_name || 'Cliente sconosciuto'}
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                         <div style="color: #3498db; font-size: 9px;">
                             €${project.budget || 0} | ${project.progress || 0}%
                         </div>
@@ -1535,12 +2044,37 @@
                         </div>
                     </div>
                     <!-- Progress Bar -->
-                    <div style="background: #1a252f; border-radius: 2px; height: 3px; margin-top: 4px; overflow: hidden;">
+                    <div style="background: #1a252f; border-radius: 2px; height: 3px; margin-bottom: 8px; overflow: hidden;">
                         <div style="background: ${statusColor}; height: 100%; width: ${project.progress || 0}%; transition: width 0.3s;"></div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="icon-btn edit" onclick="editProject('${project.id}')" title="Modifica progetto">
+                            ✏️
+                        </button>
+                        <button class="icon-btn delete" onclick="showDeleteModal(${JSON.stringify(project).replace(/"/g, '&quot;')}, 'project')" title="Elimina progetto">
+                            🗑️
+                        </button>
                     </div>
                 `;
                 
-                projectEl.onclick = () => showProjectDetails(project);
+                // Hover effect
+                projectEl.onmouseenter = () => {
+                    projectEl.style.background = '#34495e';
+                    projectEl.style.transform = 'translateX(3px)';
+                };
+                projectEl.onmouseleave = () => {
+                    projectEl.style.background = '#2c3e50';
+                    projectEl.style.transform = 'translateX(0)';
+                };
+                
+                // Click per aprire dettagli (escluso sui pulsanti)
+                projectEl.onclick = (e) => {
+                    if (!e.target.classList.contains('icon-btn')) {
+                        showProjectDetails(project);
+                    }
+                };
+                
                 container.appendChild(projectEl);
             });
         }
@@ -1597,6 +2131,21 @@
             } catch (error) {
                 console.error('Errore aggiunta progetto:', error);
             }
+        }
+
+        // Funzioni placeholder per edit
+        function editClient(clientId) {
+            const client = clientsData.find(c => c.id === clientId);
+            if (!client) return;
+            
+            alert(`Edit cliente: ${client.name}\n(Funzione da implementare)`);
+        }
+
+        function editProject(projectId) {
+            const project = projectsData.find(p => p.id === projectId);
+            if (!project) return;
+            
+            alert(`Edit progetto: ${project.name}\n(Funzione da implementare)`);
         }
 
         // ========================================
@@ -1667,22 +2216,7 @@
             
             try {
                 showNotification('🚀 Setup iniziale in corso...', 'info');
-                
-                // Lo schema SQL ha già inserito le routine di base
-                // Qui possiamo aggiungere raccolta differenziata per la settimana
-                
-                const wasteSchedule = [
-                    { collection_date: '2025-07-07', waste_type: 'CARTA', description: 'Carta e cartone' },
-                    { collection_date: '2025-07-08', waste_type: 'ORGANICO', description: 'Rifiuti organici' },
-                    { collection_date: '2025-07-09', waste_type: 'PLASTICA E METALLI', description: 'Plastica e metalli' },
-                    { collection_date: '2025-07-11', waste_type: 'VETRO', description: 'Vetro e lattine' }
-                ];
-                
-                // In una versione completa, inseriresti questi dati via API
-                console.log('Raccolta differenziata da programmare:', wasteSchedule);
-                
                 await db.loadInitialData();
-                
                 showNotification('✅ Setup iniziale completato!', 'success');
                 
             } catch (error) {
@@ -1747,7 +2281,6 @@
                     const data = JSON.parse(text);
                     
                     if (confirm(`📥 Importare dati da ${file.name}?\n\nQuesta operazione potrebbe sovrascrivere dati esistenti.`)) {
-                        // In una versione completa, implementeresti l'import nel database
                         console.log('Dati da importare:', data);
                         showNotification('📥 Import completato!', 'success');
                     }
@@ -1777,9 +2310,7 @@
                 updateSyncStatus('syncing');
                 showNotification('⚡ Sincronizzazione forzata...', 'info');
                 
-                // Simula sincronizzazione completa
                 await new Promise(resolve => setTimeout(resolve, 2000));
-                
                 await refreshAllData();
                 showNotification('⚡ Sincronizzazione completata!', 'success');
                 updateSyncStatus('connected');
@@ -1823,6 +2354,21 @@
                 window.addEventListener('offline', () => {
                     updateSyncStatus('disconnected');
                     showNotification('🔴 Modalità offline', 'warning');
+                });
+
+                // Event listener per chiudere modal cliccando fuori
+                document.addEventListener('click', function(event) {
+                    const deleteModal = document.getElementById('deleteModal');
+                    if (event.target === deleteModal) {
+                        closeDeleteModal();
+                    }
+                });
+
+                // Event listener per chiudere modal con ESC
+                document.addEventListener('keydown', function(event) {
+                    if (event.key === 'Escape') {
+                        closeDeleteModal();
+                    }
                 });
                 
                 console.log('✅ Agenda AI Database Edition inizializzata');
