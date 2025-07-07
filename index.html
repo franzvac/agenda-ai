@@ -5,19 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎯 Agenda AI - Google Integration</title>
     
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <!-- Google APIs -->
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://accounts.google.com/gsi/client"></script>
     
-    <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- ⭐ CONFIGURAZIONE CENTRALIZZATA - CARICA SEMPRE PER PRIMO -->
-    <script src="config.js"></script>
-    
-    <!-- Il tuo CSS originale qui -->
     <style>
-        /* ... tutto il tuo CSS originale rimane identico ... */
         * {
             margin: 0;
             padding: 0;
@@ -31,40 +26,696 @@
             overflow-x: hidden;
         }
 
-        /* ... tutto il resto del tuo CSS ... */
-        
-        /* Nuovo stile per indicatori di configurazione */
-        .config-status {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.8);
+        .container {
+            max-width: 100vw;
+            margin: 0;
+            background: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* HEADER COMPATTO */
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
             color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin: 0;
+        }
+
+        .week-nav {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-btn {
+            background: #3498db;
+            color: white;
+            border: none;
             padding: 8px 12px;
             border-radius: 6px;
-            font-size: 11px;
-            z-index: 9999;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .nav-btn:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+
+        .current-week {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #ecf0f1;
+            margin: 0 10px;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .google-status {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .google-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+
+        .google-indicator.connected { background: #27ae60; }
+        .google-indicator.connecting { background: #f39c12; }
+
+        .google-auth-btn {
+            background: #db4437;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .google-auth-btn:hover {
+            background: #c33d2e;
+        }
+
+        .sync-status {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .sync-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+
+        .sync-indicator.connected { background: #27ae60; }
+        .sync-indicator.syncing { background: #f39c12; }
+
+        /* NOTIFICATION BAR */
+        .notification-bar {
+            background: #3498db;
+            color: white;
+            padding: 8px 20px;
+            text-align: center;
+            font-size: 12px;
             display: none;
         }
-        
-        .config-status.show { display: block; }
-        .config-status.valid { background: rgba(39, 174, 96, 0.9); }
-        .config-status.invalid { background: rgba(231, 76, 60, 0.9); }
-        .config-status.warning { background: rgba(243, 156, 18, 0.9); }
+
+        .notification-bar.show { display: block; }
+        .notification-bar.success { background: #27ae60; }
+        .notification-bar.error { background: #e74c3c; }
+        .notification-bar.warning { background: #f39c12; }
+
+        /* TOP NAVIGATION TABS */
+        .top-nav {
+            background: #34495e;
+            border-bottom: 2px solid #3498db;
+            padding: 0;
+            display: flex;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .top-nav::-webkit-scrollbar { display: none; }
+
+        .nav-tab {
+            flex: 1;
+            min-width: 100px;
+            padding: 12px 16px;
+            background: transparent;
+            color: #bdc3c7;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+        }
+
+        .nav-tab:hover {
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+        }
+
+        .nav-tab.active {
+            background: #3498db;
+            color: white;
+            border-bottom-color: #2980b9;
+        }
+
+        /* MAIN LAYOUT */
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 0;
+            min-height: calc(100vh - 130px);
+        }
+
+        /* WEEKLY CALENDAR */
+        .calendar-section {
+            padding: 20px;
+            background: #f8f9fa;
+            overflow-y: auto;
+        }
+
+        .calendar-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .calendar-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover {
+            background: #2980b9;
+        }
+
+        .action-btn.google { background: #db4437; }
+        .action-btn.google:hover { background: #c33d2e; }
+
+        .action-btn.ai { background: #9b59b6; }
+        .action-btn.ai:hover { background: #8e44ad; }
+
+        .weekly-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(7, 1fr);
+            gap: 1px;
+            background: #bdc3c7;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .time-header {
+            background: #34495e;
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .day-header {
+            background: #34495e;
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .day-header.today {
+            background: #f39c12;
+        }
+
+        .day-date {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .day-name {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+
+        .time-slot {
+            background: #2c3e50;
+            color: white;
+            padding: 10px 8px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .day-cell {
+            background: white;
+            min-height: 60px;
+            padding: 4px;
+            position: relative;
+            border-right: 1px solid #ecf0f1;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .day-cell:hover {
+            background: #e8f4fd;
+        }
+
+        .day-cell.selected {
+            background: #d5e8ff;
+            border: 2px solid #3498db;
+        }
+
+        .day-cell.conflict {
+            background: #fdf2f2;
+            border-left: 3px solid #e74c3c;
+        }
+
+        .cell-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .event-chip {
+            background: #3498db;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .event-chip:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .event-chip.work { background: #3498db; }
+        .event-chip.personal { background: #27ae60; }
+        .event-chip.medical { background: #e67e22; }
+        .event-chip.house { background: #8e44ad; }
+        .event-chip.email-task { 
+            background: #e91e63; 
+            border-left: 3px solid #ad1457;
+        }
+        .event-chip.routine { background: #95a5a6; }
+        .event-chip.project { background: #f39c12; }
+        .event-chip.google-event { 
+            background: #db4437; 
+            border-left: 3px solid #c33d2e;
+        }
+
+        .event-source {
+            position: absolute;
+            top: 1px;
+            right: 2px;
+            font-size: 8px;
+            opacity: 0.8;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 2px solid #34495e;
+        }
+
+        /* TAB CONTENT STYLES */
+        .tab-content {
+            display: none;
+            height: 100%;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section-card {
+            background: #34495e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+        }
+
+        .section-title {
+            color: #ecf0f1;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stats-mini {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .stat-mini {
+            background: #34495e;
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-mini-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #3498db;
+            display: block;
+        }
+
+        .stat-mini-label {
+            font-size: 10px;
+            color: #bdc3c7;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 4px;
+            color: #ecf0f1;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 6px 8px;
+            border: none;
+            border-radius: 4px;
+            background: #2c3e50;
+            color: white;
+            font-size: 11px;
+            border: 1px solid transparent;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #3498db;
+            background: #1a252f;
+        }
+
+        .btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            width: 100%;
+            transition: all 0.3s;
+            margin-bottom: 6px;
+        }
+
+        .btn:hover {
+            background: #219a52;
+        }
+
+        .btn:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 10px;
+            width: auto;
+            display: inline-block;
+            margin: 2px;
+        }
+
+        .btn-database { background: #9b59b6; }
+        .btn-database:hover { background: #8e44ad; }
+
+        .btn-sync { background: #3498db; }
+        .btn-sync:hover { background: #2980b9; }
+
+        .btn-ai { background: #e67e22; }
+        .btn-ai:hover { background: #d35400; }
+
+        .btn-google { background: #db4437; }
+        .btn-google:hover { background: #c33d2e; }
+
+        /* LOADING SPINNER */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #bdc3c7;
+            border-radius: 50%;
+            border-top-color: #3498db;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* AI SUGGESTION POPUP */
+        .ai-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            z-index: 2000;
+            display: none;
+            animation: aiPopupSlideIn 0.3s ease-out;
+        }
+
+        @keyframes aiPopupSlideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8) translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1) translateY(0);
+            }
+        }
+
+        .ai-popup-header {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+            padding: 15px 20px;
+            margin: -25px -25px 20px -25px;
+            border-radius: 15px 15px 0 0;
+            position: relative;
+        }
+
+        .ai-popup-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 18px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .ai-suggestion {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #9b59b6;
+        }
+
+        .ai-suggestion-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .ai-suggestion-content {
+            color: #7f8c8d;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .ai-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .ai-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .ai-btn.accept {
+            background: #27ae60;
+            color: white;
+        }
+
+        .ai-btn.reject {
+            background: #e74c3c;
+            color: white;
+        }
+
+        /* CONFLICT INDICATOR */
+        .conflict-warning {
+            background: #fdf2f2;
+            border: 1px solid #fcdada;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+            color: #721c24;
+            font-size: 11px;
+        }
+
+        .conflict-warning-icon {
+            color: #e74c3c;
+            margin-right: 5px;
+        }
+
+        /* EMAIL ANALYSIS */
+        .email-item {
+            background: #2c3e50;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-left: 3px solid #e91e63;
+        }
+
+        .email-subject {
+            color: #ecf0f1;
+            font-weight: bold;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+
+        .email-from {
+            color: #bdc3c7;
+            font-size: 10px;
+            margin-bottom: 6px;
+        }
+
+        .email-analysis {
+            background: #1a252f;
+            border-radius: 4px;
+            padding: 6px;
+            color: #e91e63;
+            font-size: 10px;
+            margin-bottom: 6px;
+        }
+
+        .email-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
+            }
+
+            .sidebar {
+                max-height: 50vh;
+                border-left: none;
+                border-top: 2px solid #34495e;
+            }
+
+            .weekly-grid {
+                grid-template-columns: 60px repeat(7, 1fr);
+                gap: 0;
+            }
+
+            .header-right {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
     </style>
 </head>
 <body>
-    <!-- Indicatore stato configurazione -->
-    <div id="configStatus" class="config-status">
-        🔧 Caricamento configurazione...
-    </div>
-
-    <!-- Il tuo HTML originale qui -->
     <div class="container">
         <!-- HEADER -->
         <div class="header">
             <div class="header-left">
-                <h1 id="appTitle">🎯 Agenda AI</h1>
+                <h1>🎯 Agenda AI</h1>
                 <div class="week-nav">
                     <button class="nav-btn" onclick="previousWeek()">←</button>
                     <div class="current-week" id="currentWeek"></div>
@@ -89,60 +740,350 @@
             </div>
         </div>
 
-        <!-- ... resto del tuo HTML originale ... -->
+        <!-- NOTIFICATION BAR -->
+        <div class="notification-bar" id="notificationBar"></div>
+
+        <!-- TOP NAVIGATION TABS -->
+        <div class="top-nav">
+            <button class="nav-tab active" onclick="switchMainTab('dashboard')">📊 Dashboard</button>
+            <button class="nav-tab" onclick="switchMainTab('tasks')">✅ Task</button>
+            <button class="nav-tab" onclick="switchMainTab('google')">📧 Google</button>
+            <button class="nav-tab" onclick="switchMainTab('ai')">🤖 AI Assistant</button>
+            <button class="nav-tab" onclick="switchMainTab('clients')">👥 Clienti</button>
+            <button class="nav-tab" onclick="switchMainTab('projects')">📋 Progetti</button>
+            <button class="nav-tab" onclick="switchMainTab('import')">📤 Import/Export</button>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- WEEKLY CALENDAR -->
+            <div class="calendar-section">
+                <div class="calendar-controls">
+                    <div>
+                        <strong id="weekRange">Settimana Corrente</strong>
+                    </div>
+                    <div class="calendar-actions">
+                        <button class="action-btn google" onclick="syncGoogleCalendar()">📅 Sync Calendar</button>
+                        <button class="action-btn ai" onclick="analyzeOptimalSlots()">🤖 Ottimizza</button>
+                        <button class="action-btn" onclick="detectConflicts()">⚠️ Conflitti</button>
+                    </div>
+                </div>
+
+                <div class="weekly-grid" id="weeklyGrid">
+                    <!-- Generato dinamicamente -->
+                </div>
+                
+                <div id="selectedDayInfo" style="background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <h3 style="color: #2c3e50; margin-bottom: 10px;">📅 <span id="selectedDayTitle">Caricamento...</span></h3>
+                    <div id="selectedDayTasks" style="color: #7f8c8d;">
+                        Connessione al database in corso...
+                    </div>
+                </div>
+            </div>
+
+            <!-- SIDEBAR DINAMICA -->
+            <div class="sidebar">
+                <!-- DASHBOARD TAB -->
+                <div id="tab-dashboard" class="tab-content active">
+                    <div class="stats-mini">
+                        <div class="stat-mini">
+                            <span class="stat-mini-number" id="tasksToday">-</span>
+                            <span class="stat-mini-label">Task Oggi</span>
+                        </div>
+                        <div class="stat-mini">
+                            <span class="stat-mini-number" id="googleEvents">-</span>
+                            <span class="stat-mini-label">Google Events</span>
+                        </div>
+                        <div class="stat-mini">
+                            <span class="stat-mini-number" id="emailTasks">-</span>
+                            <span class="stat-mini-label">Email Tasks</span>
+                        </div>
+                        <div class="stat-mini">
+                            <span class="stat-mini-number" id="conflictsCount">-</span>
+                            <span class="stat-mini-label">Conflitti</span>
+                        </div>
+                    </div>
+
+                    <div class="section-card">
+                        <div class="section-title">⚡ Azioni Dashboard</div>
+                        <button class="btn btn-sync" onclick="refreshAllData()">
+                            <span id="refreshSpinner"></span>
+                            🔄 Sincronizza Tutto
+                        </button>
+                        <button class="btn btn-google" onclick="fullGoogleSync()">
+                            📧 Sync Completo Google
+                        </button>
+                        <button class="btn btn-ai" onclick="analyzeAndSuggest()">
+                            🤖 Analizza & Suggerisci
+                        </button>
+                    </div>
+
+                    <div class="section-card">
+                        <div class="section-title">📈 Statistiche AI</div>
+                        <div style="color: #bdc3c7; font-size: 10px; line-height: 1.4;">
+                            <div>🧠 Task auto-generati: <span id="aiGeneratedTasks">0</span></div>
+                            <div>📧 Email analizzate: <span id="emailsAnalyzed">0</span></div>
+                            <div>⏰ Slot ottimizzati: <span id="optimizedSlots">0</span></div>
+                            <div>🎯 Accuracy rate: <span id="aiAccuracy">95%</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TASKS TAB -->
+                <div id="tab-tasks" class="tab-content">
+                    <div class="section-card">
+                        <div class="section-title">➕ Nuovo Task</div>
+                        <div class="form-group">
+                            <label for="taskTitle">Titolo</label>
+                            <input type="text" id="taskTitle" class="form-control" placeholder="Sviluppo homepage">
+                        </div>
+                        <div class="form-group">
+                            <label for="taskClient">Cliente</label>
+                            <select id="taskClient" class="form-control">
+                                <option value="">Seleziona...</option>
+                            </select>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                            <div class="form-group">
+                                <label for="taskDate">Data</label>
+                                <input type="date" id="taskDate" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="taskTime">Ora</label>
+                                <input type="time" id="taskTime" class="form-control">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="taskDuration">Durata (ore)</label>
+                            <select id="taskDuration" class="form-control">
+                                <option value="0.5">30 min</option>
+                                <option value="1" selected>1 ora</option>
+                                <option value="1.5">1.5 ore</option>
+                                <option value="2">2 ore</option>
+                                <option value="3">3 ore</option>
+                                <option value="4">4 ore</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="syncToGoogle" checked> 
+                                Sincronizza con Google Calendar
+                            </label>
+                        </div>
+                        <button class="btn" onclick="addNewTask()">
+                            <span id="addTaskSpinner"></span>
+                            Aggiungi Task
+                        </button>
+                        <button class="btn btn-ai" onclick="suggestOptimalTime()">
+                            🤖 Trova Slot Ottimale
+                        </button>
+                    </div>
+
+                    <div id="conflictWarning" class="conflict-warning" style="display: none;">
+                        <span class="conflict-warning-icon">⚠️</span>
+                        <span id="conflictText">Conflitto rilevato!</span>
+                    </div>
+                </div>
+
+                <!-- GOOGLE TAB -->
+                <div id="tab-google" class="tab-content">
+                    <div class="section-card">
+                        <div class="section-title">📧 Stato Google</div>
+                        <div style="color: #bdc3c7; font-size: 10px; line-height: 1.4; margin-bottom: 10px;">
+                            <div>📅 Calendar: <span id="calendarStatus">Disconnesso</span></div>
+                            <div>📧 Gmail: <span id="gmailStatus">Disconnesso</span></div>
+                            <div>🔄 Ultimo sync: <span id="lastGoogleSync">-</span></div>
+                            <div>📊 Eventi trovati: <span id="googleEventsCount">0</span></div>
+                        </div>
+                        <button class="btn btn-google" onclick="connectGoogle()">
+                            📧 Connetti Google
+                        </button>
+                        <button class="btn btn-sync" onclick="syncGoogleCalendar()">
+                            📅 Sync Calendar
+                        </button>
+                        <button class="btn btn-ai" onclick="analyzeEmails()">
+                            📧 Analizza Email
+                        </button>
+                    </div>
+
+                    <div class="section-card">
+                        <div class="section-title">📧 Email Analysis</div>
+                        <div id="emailAnalysisList" style="max-height: 200px; overflow-y: auto;">
+                            <div style="text-align: center; color: #bdc3c7; font-style: italic; padding: 20px;">
+                                Connetti Gmail per analizzare le email
+                            </div>
+                        </div>
+                        <button class="btn btn-small" onclick="processEmailTasks()">✅ Crea Task da Email</button>
+                    </div>
+                </div>
+
+                <!-- AI ASSISTANT TAB -->
+                <div id="tab-ai" class="tab-content">
+                    <div class="section-card">
+                        <div class="section-title">🤖 AI Assistant</div>
+                        <div class="form-group">
+                            <label for="aiPrompt">Cosa vuoi fare?</label>
+                            <textarea id="aiPrompt" class="form-control" rows="3" placeholder="Es: Programma un meeting con Mario Rossi per domani mattina..."></textarea>
+                        </div>
+                        <button class="btn btn-ai" onclick="processAIRequest()">
+                            🤖 Elabora Richiesta
+                        </button>
+                        <button class="btn btn-sync" onclick="optimizeWeekSchedule()">
+                            📊 Ottimizza Settimana
+                        </button>
+                    </div>
+
+                    <div class="section-card">
+                        <div class="section-title">💡 Suggerimenti AI</div>
+                        <div id="aiSuggestionsList" style="max-height: 200px; overflow-y: auto;">
+                            <div style="color: #bdc3c7; font-style: italic; font-size: 11px;">
+                                L'AI analizzerà il tuo calendario e suggerirà ottimizzazioni...
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-card">
+                        <div class="section-title">⚙️ Impostazioni AI</div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="autoScheduling" checked> 
+                                Scheduling automatico
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="emailAutoTask" checked> 
+                                Task automatici da email
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="conflictDetection" checked> 
+                                Rilevamento conflitti
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CLIENTS TAB -->
+                <div id="tab-clients" class="tab-content">
+                    <div class="section-card">
+                        <div class="section-title">👥 Gestione Clienti</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px;">
+                            <button class="btn" onclick="showAddClientForm()">➕ Nuovo</button>
+                            <button class="btn btn-sync" onclick="loadClients()">🔄 Ricarica</button>
+                        </div>
+                        <div id="clientsList" style="max-height: 200px; overflow-y: auto;">
+                            <div style="text-align: center; color: #bdc3c7; font-style: italic; padding: 20px;">
+                                Caricamento clienti...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PROJECTS TAB -->
+                <div id="tab-projects" class="tab-content">
+                    <div class="section-card">
+                        <div class="section-title">📋 Progetti Attivi</div>
+                        <div id="projectsList" style="max-height: 200px; overflow-y: auto;">
+                            <div style="text-align: center; color: #bdc3c7; font-style: italic; padding: 20px;">
+                                Caricamento progetti...
+                            </div>
+                        </div>
+                        <button class="btn" onclick="showAddProjectForm()">➕ Nuovo Progetto</button>
+                    </div>
+                </div>
+
+                <!-- IMPORT/EXPORT TAB -->
+                <div id="tab-import" class="tab-content">
+                    <div class="section-card">
+                        <div class="section-title">📤 Export Dati</div>
+                        <button class="btn btn-sync" onclick="exportToCSV()">📊 Esporta CSV</button>
+                        <button class="btn btn-sync" onclick="exportToJSON()">📄 Esporta JSON</button>
+                        <button class="btn btn-sync" onclick="exportToXML()">🗂️ Esporta XML</button>
+                        <button class="btn btn-google" onclick="exportToGoogleCalendar()">📅 Export Google Calendar</button>
+                    </div>
+
+                    <div class="section-card">
+                        <div class="section-title">📥 Import Dati</div>
+                        <input type="file" id="importFileInput" accept=".csv,.json,.xml,.ics" style="display: none;" onchange="handleFileImport(event)">
+                        <button class="btn btn-ai" onclick="document.getElementById('importFileInput').click()">📁 Seleziona File</button>
+                        <div style="color: #bdc3c7; font-size: 10px; margin-top: 8px; line-height: 1.3;">
+                            Formati supportati:<br>
+                            • CSV (task, clienti)<br>
+                            • JSON (backup completo)<br>
+                            • XML (task strutturati)<br>
+                            • ICS (calendario)
+                        </div>
+                    </div>
+
+                    <div class="section-card">
+                        <div class="section-title">🔄 Raccolta Differenziata</div>
+                        <button class="btn btn-database" onclick="importWasteCollection()">🗑️ Carica Calendario Rifiuti</button>
+                        <div style="color: #bdc3c7; font-size: 10px; margin-top: 8px;">
+                            Importa automaticamente il calendario raccolta differenziata 2025 per Chieti
+                        </div>
+                    </div>
+
+                    <div id="importStatus" class="section-card" style="display: none;">
+                        <div class="section-title">📊 Stato Import</div>
+                        <div id="importResults" style="color: #bdc3c7; font-size: 11px; line-height: 1.4;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI SUGGESTION POPUP -->
+    <div class="ai-popup" id="aiPopup">
+        <div class="ai-popup-header">
+            <h3>🤖 Suggerimento AI</h3>
+            <button class="ai-popup-close" onclick="closeAIPopup()">×</button>
+        </div>
         
+        <div class="ai-suggestion">
+            <div class="ai-suggestion-title" id="aiSuggestionTitle">Slot ottimale trovato!</div>
+            <div class="ai-suggestion-content" id="aiSuggestionContent">
+                Suggerimento AI...
+            </div>
+        </div>
+        
+        <div class="ai-actions">
+            <button class="ai-btn reject" onclick="closeAIPopup()">❌ Rifiuta</button>
+            <button class="ai-btn accept" onclick="acceptAISuggestion()">✅ Accetta</button>
+        </div>
     </div>
 
     <script>
-        console.log('🚀 Caricamento Agenda AI con configurazione centralizzata...');
+        console.log('🚀 Caricamento Agenda AI Google Integration...');
 
         // ========================================
-        // 🔧 VERIFICA CONFIGURAZIONE ALL'AVVIO
+        // CONFIGURAZIONE GOOGLE APIS
         // ========================================
         
-        function checkConfigurationStatus() {
-            const statusEl = document.getElementById('configStatus');
-            
-            if (!window.CONFIG) {
-                showConfigStatus('❌ Config.js non caricato!', 'invalid');
-                return false;
-            }
-            
-            const validation = validateConfig();
-            
-            if (!validation.isValid) {
-                showConfigStatus(`❌ ${validation.errors.length} errori configurazione`, 'invalid');
-                return false;
-            } else if (validation.warnings.length > 0) {
-                showConfigStatus(`⚠️ ${validation.warnings.length} avvisi configurazione`, 'warning');
-                return true;
-            } else {
-                showConfigStatus('✅ Configurazione OK', 'valid');
-                setTimeout(() => hideConfigStatus(), 3000);
-                return true;
-            }
-        }
-        
-        function showConfigStatus(message, type) {
-            const statusEl = document.getElementById('configStatus');
-            if (statusEl) {
-                statusEl.textContent = message;
-                statusEl.className = `config-status show ${type}`;
-            }
-        }
-        
-        function hideConfigStatus() {
-            const statusEl = document.getElementById('configStatus');
-            if (statusEl) {
-                statusEl.classList.remove('show');
-            }
-        }
+        const GOOGLE_CONFIG = {
+            apiKey: 'AIzaSyBcNSqX0LryFhqzjFWHiq6hMV5S1a9LQfM',
+            clientId: '305495314465-j13l2f6scmoqvdadgsnvpskm89g5r6n0.apps.googleusercontent.com',
+            calendarId: 'franzvac@gmail.com',
+            scopes: [
+                'https://www.googleapis.com/auth/calendar',
+                'https://www.googleapis.com/auth/gmail.readonly',
+                'https://www.googleapis.com/auth/gmail.modify'
+            ].join(' ')
+        };
 
         // ========================================
-        // 🔗 INIZIALIZZAZIONE CON CONFIG
+        // CONFIGURAZIONE SUPABASE
         // ========================================
         
-        // Variabili globali ora inizializzate da CONFIG
+        const SUPABASE_URL = 'https://your-project.supabase.co';
+        const SUPABASE_ANON_KEY = 'your-anon-key-here';
+        const supabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ========================================
+        // VARIABILI GLOBALI
+        // ========================================
+        
         let currentWeekStart = new Date();
         let selectedDate = new Date();
         let tasksData = [];
@@ -156,29 +1097,19 @@
         let currentAISuggestion = null;
 
         // ========================================
-        // 📧 GOOGLE INTEGRATION (Aggiornato per CONFIG)
+        // GOOGLE APIS MANAGER
         // ========================================
 
         class GoogleIntegration {
             constructor() {
                 this.isSignedIn = false;
                 this.auth2 = null;
-                this.config = CONFIG.google; // Usa configurazione centralizzata
                 this.init();
             }
 
             async init() {
                 try {
                     showNotification('🔄 Inizializzando Google APIs...', 'info');
-                    
-                    // Verifica configurazione
-                    if (!this.config.apiKey || this.config.apiKey.startsWith('TUA_')) {
-                        throw new Error('❌ Google API Key non configurata in config.js');
-                    }
-                    
-                    if (!this.config.clientId || this.config.clientId.startsWith('TUO_')) {
-                        throw new Error('❌ Google Client ID non configurato in config.js');
-                    }
                     
                     await this.loadGoogleAPIs();
                     await this.initializeGoogleAuth();
@@ -189,30 +1120,31 @@
                 } catch (error) {
                     console.error('Errore inizializzazione Google:', error);
                     updateGoogleStatus('error');
-                    showNotification(error.message, 'error');
-                    this.showConfigurationHelp();
+                    showNotification('❌ Errore inizializzazione Google: ' + error.message, 'error');
                 }
             }
 
             loadGoogleAPIs() {
                 return new Promise((resolve, reject) => {
                     if (typeof gapi !== 'undefined') {
-                        gapi.load('auth2:client', resolve);
+                        gapi.load('auth2:client', () => {
+                            resolve();
+                        });
                     } else {
-                        reject(new Error('Google APIs non caricate. Verifica connessione internet.'));
+                        reject(new Error('Google APIs non caricate'));
                     }
                 });
             }
 
             async initializeGoogleAuth() {
                 await gapi.client.init({
-                    apiKey: this.config.apiKey,
-                    clientId: this.config.clientId,
+                    apiKey: GOOGLE_CONFIG.apiKey,
+                    clientId: GOOGLE_CONFIG.clientId,
                     discoveryDocs: [
                         'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
                         'https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest'
                     ],
-                    scope: this.config.scopes.join(' ')
+                    scope: GOOGLE_CONFIG.scopes
                 });
 
                 this.auth2 = gapi.auth2.getAuthInstance();
@@ -225,7 +1157,7 @@
                     updateGoogleAuthButton();
                     
                     if (isSignedIn) {
-                        showNotification('✅ Google autenticato con successo!', 'success');
+                        showNotification('✅ Autenticazione Google riuscita!', 'success');
                         this.loadGoogleData();
                     } else {
                         showNotification('❌ Disconnesso da Google', 'warning');
@@ -237,19 +1169,6 @@
 
                 if (this.isSignedIn) {
                     await this.loadGoogleData();
-                }
-            }
-
-            showConfigurationHelp() {
-                console.error('🔧 CONFIGURAZIONE GOOGLE RICHIESTA:');
-                console.error('1. Apri config.js');
-                console.error('2. Inserisci la tua Google API Key');
-                console.error('3. Inserisci il tuo Google Client ID');
-                console.error('4. Configura il tuo indirizzo Gmail');
-                console.error('5. Verifica che i domini siano autorizzati in Google Cloud Console');
-                
-                if (CONFIG.app.debug) {
-                    console.error('Domini autorizzati configurati:', this.config.authorizedDomains);
                 }
             }
 
@@ -276,8 +1195,8 @@
             async loadGoogleData() {
                 try {
                     updateGoogleStatus('syncing');
-                    showNotification('🔄 Sincronizzando dati Google...', 'info');
                     
+                    // Carica eventi calendario e email in parallelo
                     const [events, emails] = await Promise.all([
                         this.getCalendarEvents(),
                         this.analyzeGmailForTasks()
@@ -286,13 +1205,13 @@
                     googleEvents = events || [];
                     emailTasks = emails || [];
                     
+                    // Aggiorna interfaccia
                     generateWeeklyCalendar();
                     updateDashboardStats();
                     updateGoogleTab();
                     
                     updateGoogleStatus('connected');
                     document.getElementById('lastGoogleSync').textContent = new Date().toLocaleTimeString('it-IT');
-                    showNotification(`✅ Sincronizzati ${googleEvents.length} eventi e ${emailTasks.length} email`, 'success');
                     
                 } catch (error) {
                     console.error('Errore caricamento dati Google:', error);
@@ -307,7 +1226,7 @@
                     const endTime = new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
                     
                     const response = await gapi.client.calendar.events.list({
-                        calendarId: this.config.calendarId,
+                        calendarId: GOOGLE_CONFIG.calendarId,
                         timeMin: startTime,
                         timeMax: endTime,
                         singleEvents: true,
@@ -321,236 +1240,715 @@
                 }
             }
 
-            // ... resto dei metodi rimangono identici al codice originale ...
+            async analyzeGmailForTasks() {
+                try {
+                    // Cerca email degli ultimi 3 giorni con parole chiave di lavoro
+                    const query = 'newer_than:3d (subject:progetto OR subject:sito OR subject:sviluppo OR subject:meeting OR subject:urgente OR subject:lavoro)';
+                    
+                    const response = await gapi.client.gmail.users.messages.list({
+                        userId: 'me',
+                        q: query,
+                        maxResults: 10
+                    });
+
+                    if (!response.result.messages) return [];
+
+                    const emailTasks = [];
+                    
+                    // Analizza ogni email
+                    for (const message of response.result.messages.slice(0, 5)) {
+                        const emailData = await gapi.client.gmail.users.messages.get({
+                            userId: 'me',
+                            id: message.id
+                        });
+
+                        const email = emailData.result;
+                        const headers = email.payload.headers;
+                        
+                        const subject = headers.find(h => h.name === 'Subject')?.value || '';
+                        const from = headers.find(h => h.name === 'From')?.value || '';
+                        const date = headers.find(h => h.name === 'Date')?.value || '';
+
+                        // Analisi AI semplificata per rilevare task
+                        const taskAnalysis = this.analyzeEmailForTask(subject, from);
+                        
+                        if (taskAnalysis.isTask) {
+                            emailTasks.push({
+                                id: message.id,
+                                subject: subject,
+                                from: from,
+                                date: new Date(date),
+                                analysis: taskAnalysis,
+                                processed: false
+                            });
+                        }
+                    }
+
+                    return emailTasks;
+                } catch (error) {
+                    console.error('Errore analisi Gmail:', error);
+                    return [];
+                }
+            }
+
+            analyzeEmailForTask(subject, from) {
+                const taskKeywords = [
+                    'progetto', 'sito', 'sviluppo', 'meeting', 'urgente',
+                    'deadline', 'scadenza', 'richiesta', 'modifica',
+                    'nuovo', 'aggiornamento', 'fix', 'bug', 'problema'
+                ];
+
+                const priorityKeywords = ['urgente', 'asap', 'importante', 'priorità'];
+                const meetingKeywords = ['meeting', 'call', 'videocall', 'riunione', 'incontro'];
+
+                const lowerSubject = subject.toLowerCase();
+                
+                // Controlla se contiene parole chiave di task
+                const hasTaskKeywords = taskKeywords.some(keyword => lowerSubject.includes(keyword));
+                
+                if (!hasTaskKeywords) {
+                    return { isTask: false };
+                }
+
+                // Determina tipo e priorità
+                const isUrgent = priorityKeywords.some(keyword => lowerSubject.includes(keyword));
+                const isMeeting = meetingKeywords.some(keyword => lowerSubject.includes(keyword));
+                
+                let suggestedType = 'work';
+                let suggestedDuration = 1;
+                
+                if (isMeeting) {
+                    suggestedType = 'project';
+                    suggestedDuration = 1;
+                } else if (lowerSubject.includes('sviluppo') || lowerSubject.includes('sito')) {
+                    suggestedType = 'project';
+                    suggestedDuration = 2;
+                }
+
+                return {
+                    isTask: true,
+                    suggestedTitle: subject.replace(/^(RE:|FW:)/i, '').trim(),
+                    suggestedType: suggestedType,
+                    suggestedDuration: suggestedDuration,
+                    priority: isUrgent ? 'high' : 'medium',
+                    isMeeting: isMeeting,
+                    clientName: this.extractClientName(from)
+                };
+            }
+
+            extractClientName(from) {
+                // Estrae nome da email "Nome Cognome <email@domain.com>"
+                const match = from.match(/^([^<]+)(?:\s*<.+>)?$/);
+                if (match) {
+                    return match[1].trim().replace(/['"]/g, '');
+                }
+                return from.split('@')[0];
+            }
+
+            async createCalendarEvent(taskData) {
+                try {
+                    const startDateTime = new Date(`${taskData.date}T${taskData.time || '09:00'}`);
+                    const endDateTime = new Date(startDateTime.getTime() + (taskData.duration || 1) * 60 * 60 * 1000);
+
+                    const event = {
+                        summary: taskData.title,
+                        description: `Task creato da Agenda AI\n\nCliente: ${taskData.clientName || 'N/A'}\nTipo: ${taskData.type}\n\nCreato automaticamente il ${new Date().toLocaleString('it-IT')}`,
+                        start: {
+                            dateTime: startDateTime.toISOString(),
+                            timeZone: 'Europe/Rome'
+                        },
+                        end: {
+                            dateTime: endDateTime.toISOString(),
+                            timeZone: 'Europe/Rome'
+                        },
+                        reminders: {
+                            useDefault: false,
+                            overrides: [
+                                { method: 'popup', minutes: 15 },
+                                { method: 'email', minutes: 60 }
+                            ]
+                        }
+                    };
+
+                    const response = await gapi.client.calendar.events.insert({
+                        calendarId: GOOGLE_CONFIG.calendarId,
+                        resource: event
+                    });
+
+                    return response.result;
+                } catch (error) {
+                    console.error('Errore creazione evento Calendar:', error);
+                    throw error;
+                }
+            }
         }
 
         // ========================================
-        // 🗄️ DATABASE MANAGER (Aggiornato per CONFIG)
+        // AI SCHEDULING ENGINE
+        // ========================================
+
+        class AIScheduler {
+            constructor() {
+                this.workingHours = { start: 9, end: 18 };
+                this.lunchBreak = { start: 13, end: 14 };
+                this.preferredSlots = [
+                    { day: 1, start: 10, end: 12 }, // Lunedì mattina
+                    { day: 2, start: 14, end: 16 }, // Martedì pomeriggio
+                    { day: 3, start: 10, end: 12 }, // Mercoledì mattina
+                    { day: 4, start: 14, end: 17 }, // Giovedì pomeriggio
+                    { day: 5, start: 9, end: 11 }   // Venerdì mattina
+                ];
+            }
+
+            findOptimalSlot(taskData, constraints = {}) {
+                const duration = parseFloat(taskData.duration) || 1;
+                const priority = taskData.priority || 'medium';
+                const type = taskData.type || 'work';
+                
+                const suggestions = [];
+                
+                // Analizza settimana corrente + prossima
+                for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
+                    const date = new Date(currentWeekStart);
+                    date.setDate(date.getDate() + dayOffset);
+                    
+                    // Skip weekend se non specificato
+                    if (date.getDay() === 0 || date.getDay() === 6) continue;
+                    
+                    const daySlots = this.analyzeDayAvailability(date, duration);
+                    
+                    daySlots.forEach(slot => {
+                        const score = this.calculateSlotScore(slot, taskData, date);
+                        suggestions.push({
+                            date: new Date(date),
+                            time: slot.time,
+                            duration: duration,
+                            score: score,
+                            reason: slot.reason,
+                            conflicts: slot.conflicts || []
+                        });
+                    });
+                }
+                
+                // Ordina per score e restituisci i migliori
+                suggestions.sort((a, b) => b.score - a.score);
+                return suggestions.slice(0, 3);
+            }
+
+            analyzeDayAvailability(date, duration) {
+                const dateKey = formatDateKey(date);
+                const dayOfWeek = date.getDay();
+                const slots = [];
+                
+                // Ottieni eventi esistenti per il giorno
+                const dayTasks = tasksData.filter(task => task.task_date === dateKey);
+                const dayGoogleEvents = googleEvents.filter(event => {
+                    if (!event.start?.dateTime) return false;
+                    const eventDate = new Date(event.start.dateTime);
+                    return formatDateKey(eventDate) === dateKey;
+                });
+                const dayRoutines = routinesData.filter(routine => 
+                    routine.days_of_week.includes(dayOfWeek || 7)
+                );
+                
+                // Analizza ogni ora lavorativa
+                for (let hour = this.workingHours.start; hour <= this.workingHours.end - duration; hour++) {
+                    const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+                    
+                    // Controlla conflitti
+                    const conflicts = this.checkConflicts(hour, duration, dayTasks, dayGoogleEvents, dayRoutines);
+                    
+                    if (conflicts.length === 0) {
+                        // Slot libero
+                        const reason = this.getSlotReason(hour, dayOfWeek);
+                        slots.push({
+                            time: timeSlot,
+                            hour: hour,
+                            available: true,
+                            reason: reason,
+                            conflicts: []
+                        });
+                    }
+                }
+                
+                return slots;
+            }
+
+            checkConflicts(hour, duration, dayTasks, dayGoogleEvents, dayRoutines) {
+                const conflicts = [];
+                const endHour = hour + duration;
+                
+                // Controlla task esistenti
+                dayTasks.forEach(task => {
+                    if (task.task_time) {
+                        const taskHour = parseInt(task.task_time.split(':')[0]);
+                        const taskDuration = task.duration_hours || 1;
+                        
+                        if (this.timesOverlap(hour, endHour, taskHour, taskHour + taskDuration)) {
+                            conflicts.push({
+                                type: 'task',
+                                title: task.title,
+                                time: task.task_time
+                            });
+                        }
+                    }
+                });
+                
+                // Controlla eventi Google
+                dayGoogleEvents.forEach(event => {
+                    const startTime = new Date(event.start.dateTime);
+                    const endTime = new Date(event.end.dateTime);
+                    const eventHour = startTime.getHours();
+                    const eventEndHour = endTime.getHours() + (endTime.getMinutes() > 0 ? 1 : 0);
+                    
+                    if (this.timesOverlap(hour, endHour, eventHour, eventEndHour)) {
+                        conflicts.push({
+                            type: 'google-event',
+                            title: event.summary,
+                            time: startTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+                        });
+                    }
+                });
+                
+                // Controlla routine
+                dayRoutines.forEach(routine => {
+                    const routineHour = parseInt(routine.time_start.split(':')[0]);
+                    const routineDuration = routine.duration_hours || 1;
+                    
+                    if (this.timesOverlap(hour, endHour, routineHour, routineHour + routineDuration)) {
+                        conflicts.push({
+                            type: 'routine',
+                            title: routine.title,
+                            time: routine.time_start
+                        });
+                    }
+                });
+                
+                // Controlla pausa pranzo
+                if (this.timesOverlap(hour, endHour, this.lunchBreak.start, this.lunchBreak.end)) {
+                    conflicts.push({
+                        type: 'lunch',
+                        title: 'Pausa pranzo',
+                        time: '13:00'
+                    });
+                }
+                
+                return conflicts;
+            }
+
+            timesOverlap(start1, end1, start2, end2) {
+                return start1 < end2 && end1 > start2;
+            }
+
+            calculateSlotScore(slot, taskData, date) {
+                let score = 100;
+                const hour = slot.hour;
+                const dayOfWeek = date.getDay();
+                const daysFromNow = Math.floor((date - new Date()) / (1000 * 60 * 60 * 24));
+                
+                // Preferenza oraria
+                if (hour >= 9 && hour <= 11) {
+                    score += 20; // Mattina preferita
+                } else if (hour >= 14 && hour <= 16) {
+                    score += 15; // Primo pomeriggio
+                } else if (hour >= 17) {
+                    score -= 10; // Tardo pomeriggio
+                }
+                
+                // Preferenza giorno settimana
+                if (dayOfWeek >= 1 && dayOfWeek <= 3) {
+                    score += 15; // Inizio settimana
+                } else if (dayOfWeek === 5) {
+                    score -= 5; // Venerdì
+                }
+                
+                // Urgenza task
+                if (taskData.priority === 'high') {
+                    score -= daysFromNow * 5; // Preferisce giorni vicini
+                } else if (taskData.priority === 'low') {
+                    score += daysFromNow * 2; // Può essere posticipato
+                }
+                
+                // Tipo task
+                if (taskData.type === 'project' && (hour >= 10 && hour <= 12)) {
+                    score += 10; // Progetti al mattino
+                } else if (taskData.type === 'personal' && hour >= 17) {
+                    score += 5; // Personale verso sera
+                }
+                
+                return Math.max(0, score);
+            }
+
+            getSlotReason(hour, dayOfWeek) {
+                const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+                
+                if (hour >= 9 && hour <= 11) {
+                    return `${dayNames[dayOfWeek]} mattina - Produttività alta`;
+                } else if (hour >= 14 && hour <= 16) {
+                    return `${dayNames[dayOfWeek]} pomeriggio - Buono per meeting`;
+                } else if (hour >= 17) {
+                    return `${dayNames[dayOfWeek]} tardo pomeriggio - Disponibile`;
+                }
+                
+                return `${dayNames[dayOfWeek]} - Slot disponibile`;
+            }
+
+            generateWeekOptimization() {
+                const suggestions = [];
+                const currentTasks = tasksData.filter(task => {
+                    const taskDate = new Date(task.task_date);
+                    return taskDate >= currentWeekStart && taskDate < new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+                });
+                
+                // Analizza carico lavoro giornaliero
+                const dailyLoad = {};
+                currentTasks.forEach(task => {
+                    const date = task.task_date;
+                    dailyLoad[date] = (dailyLoad[date] || 0) + (task.duration_hours || 1);
+                });
+                
+                // Suggerimenti per bilanciamento
+                Object.entries(dailyLoad).forEach(([date, hours]) => {
+                    if (hours > 8) {
+                        suggestions.push({
+                            type: 'overload',
+                            date: date,
+                            message: `Giorno sovraccarico (${hours}h). Considera di spostare alcuni task.`,
+                            severity: 'high'
+                        });
+                    } else if (hours < 4) {
+                        suggestions.push({
+                            type: 'underload',
+                            date: date,
+                            message: `Giorno con poco carico (${hours}h). Puoi aggiungere altri task.`,
+                            severity: 'low'
+                        });
+                    }
+                });
+                
+                // Suggerimenti per gap di tempo
+                for (let day = 0; day < 7; day++) {
+                    const date = new Date(currentWeekStart);
+                    date.setDate(date.getDate() + day);
+                    const dateKey = formatDateKey(date);
+                    
+                    const dayTasks = currentTasks.filter(task => task.task_date === dateKey);
+                    if (dayTasks.length === 0 && date.getDay() >= 1 && date.getDay() <= 5) {
+                        suggestions.push({
+                            type: 'empty_day',
+                            date: dateKey,
+                            message: `Giorno completamente libero. Considera di programmare attività.`,
+                            severity: 'medium'
+                        });
+                    }
+                }
+                
+                return suggestions;
+            }
+        }
+
+        // ========================================
+        // DATABASE MANAGER (ENHANCED)
         // ========================================
 
         class AgendaDatabase {
             constructor() {
-                this.config = CONFIG.supabase; // Usa configurazione centralizzata
                 this.isOnline = navigator.onLine;
                 this.localStorageKey = 'agenda_offline_data';
-                this.supabase = null;
-                this.init();
-            }
-
-            async init() {
-                try {
-                    // Verifica configurazione Supabase
-                    if (!this.config.url || this.config.url.startsWith('https://tuo-')) {
-                        console.warn('⚠️ Supabase non configurato - modalità offline');
-                        isDbConnected = false;
-                        updateSyncStatus('disconnected');
-                        this.loadDemoData();
-                        return;
-                    }
-
-                    if (!this.config.anonKey || this.config.anonKey.startsWith('tua-')) {
-                        console.warn('⚠️ Supabase Anon Key mancante - modalità offline');
-                        isDbConnected = false;
-                        updateSyncStatus('disconnected');
-                        this.loadDemoData();
-                        return;
-                    }
-
-                    // Inizializza Supabase
-                    this.supabase = window.supabase.createClient(this.config.url, this.config.anonKey);
-                    await this.testConnection();
-                    
-                } catch (error) {
-                    console.error('Errore inizializzazione database:', error);
-                    isDbConnected = false;
-                    updateSyncStatus('error');
-                    this.loadDemoData();
-                }
+                this.testConnection();
             }
 
             async testConnection() {
                 try {
-                    showNotification('🔄 Testando connessione Supabase...', 'info');
+                    showNotification('🔄 Testando connessione database...', 'info');
                     updateSyncStatus('connecting');
                     
-                    const { data, error } = await this.supabase
-                        .from(this.config.tables.tasks)
-                        .select('count')
-                        .limit(1);
+                    if (!supabase) {
+                        throw new Error('Supabase non configurato. Imposta le credenziali nel codice.');
+                    }
+                    
+                    const { data, error } = await supabase.from('tasks').select('count').limit(1);
                     
                     if (error) throw error;
                     
                     isDbConnected = true;
                     updateSyncStatus('connected');
-                    showNotification('✅ Supabase connesso!', 'success');
+                    showNotification('✅ Database connesso!', 'success');
                     
                     await this.loadInitialData();
                     
                 } catch (error) {
-                    console.error('Supabase non connesso:', error);
+                    console.error('Database non connesso:', error);
                     isDbConnected = false;
                     updateSyncStatus('error');
-                    showNotification('⚠️ Database offline - modalità demo', 'warning');
+                    showNotification('⚠️ Database offline - Modalità demo attiva', 'warning');
                     this.loadDemoData();
                 }
             }
 
-            // ... resto dei metodi database rimangono identici ...
-        }
-
-        // ========================================
-        // 🎬 INIZIALIZZAZIONE PRINCIPALE (Aggiornata)
-        // ========================================
-
-        async function init() {
-            console.log('🔄 Inizializzazione Agenda AI con configurazione centralizzata...');
-            
-            try {
-                // 1. Verifica configurazione
-                if (!checkConfigurationStatus()) {
-                    throw new Error('Configurazione non valida. Controlla config.js');
+            async loadInitialData() {
+                showSpinner('refreshSpinner', true);
+                
+                try {
+                    const [tasks, clients, projects, routines] = await Promise.all([
+                        this.getTasks(),
+                        this.getClients(),
+                        this.getProjects(),
+                        this.getRoutines()
+                    ]);
+                    
+                    tasksData = tasks || [];
+                    clientsData = clients || [];
+                    projectsData = projects || [];
+                    routinesData = routines || [];
+                    
+                    generateWeeklyCalendar();
+                    updateDashboardStats();
+                    populateClientsList();
+                    populateProjectsList();
+                    
+                    showNotification('📊 Dati caricati!', 'success');
+                    
+                } catch (error) {
+                    console.error('Errore caricamento dati:', error);
+                    this.loadDemoData();
+                } finally {
+                    showSpinner('refreshSpinner', false);
                 }
-                
-                // 2. Applica configurazione app
-                if (CONFIG.app.name) {
-                    document.getElementById('appTitle').textContent = `🎯 ${CONFIG.app.name}`;
-                    document.title = `${CONFIG.app.name} - v${CONFIG.app.version}`;
-                }
-                
-                // 3. Setup date e timezone
-                if (CONFIG.app.timezone) {
-                    console.log(`⏰ Timezone: ${CONFIG.app.timezone}`);
-                }
-                
-                currentWeekStart = getWeekStart(new Date());
-                selectedDate = new Date();
-                
-                // 4. Inizializza componenti
-                console.log('🔧 Inizializzando componenti...');
-                
-                db = new AgendaDatabase();
-                aiScheduler = new AIScheduler();
-                googleIntegration = new GoogleIntegration();
-                
-                // 5. Setup UI
-                const taskDateField = document.getElementById('taskDate');
-                if (taskDateField) {
-                    taskDateField.value = formatDateKey(selectedDate);
-                }
-                
-                setupEventListeners();
-                
-                // 6. Auto-sync se configurato
-                if (CONFIG.app.autoSyncInterval > 0) {
-                    setInterval(autoSync, CONFIG.app.autoSyncInterval * 60 * 1000);
-                    console.log(`🔄 Auto-sync ogni ${CONFIG.app.autoSyncInterval} minuti`);
-                }
-                
-                console.log(`✅ ${CONFIG.app.name} v${CONFIG.app.version} inizializzato`);
-                
-                // 7. Comandi debug se attivi
-                if (CONFIG.app.debug) {
-                    setupDebugCommands();
-                }
-                
-            } catch (error) {
-                console.error('❌ Errore inizializzazione:', error);
-                showNotification('❌ Errore: ' + error.message, 'error');
-                showConfigurationHelp();
             }
-        }
 
-        function setupDebugCommands() {
-            window.AGENDA_DEBUG = {
-                showConfig: () => console.table(CONFIG),
-                validateConfig: validateConfig,
-                runDiagnostics: runConfigDiagnostics,
-                testGoogle: () => googleIntegration?.testConnection(),
-                testSupabase: () => db?.testConnection(),
-                refreshAll: refreshAllData,
-                exportData: () => exportToJSON(),
-                showTasks: () => console.table(tasksData),
-                showEvents: () => console.table(googleEvents),
-                clearCache: () => {
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    console.log('✅ Cache pulita');
-                },
-                version: CONFIG.app.version
-            };
-            
-            console.log('🐛 Debug commands disponibili in AGENDA_DEBUG:');
-            console.log('   - AGENDA_DEBUG.showConfig() - Mostra configurazione');
-            console.log('   - AGENDA_DEBUG.runDiagnostics() - Diagnostica completa');
-            console.log('   - AGENDA_DEBUG.testGoogle() - Test Google APIs');
-            console.log('   - AGENDA_DEBUG.testSupabase() - Test Supabase');
-            console.log('   - AGENDA_DEBUG.refreshAll() - Ricarica tutti i dati');
-        }
+            loadDemoData() {
+                // Dati demo per quando il database non è disponibile
+                const today = new Date();
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
 
-        async function autoSync() {
-            if (!CONFIG.app.autoSyncInterval) return;
-            
-            try {
-                console.log('🔄 Auto-sync in corso...');
-                if (isGoogleConnected && googleIntegration) {
-                    await googleIntegration.loadGoogleData();
-                }
-                if (isDbConnected && db) {
-                    await db.loadTasksForWeek();
-                }
+                tasksData = [
+                    {
+                        id: 'demo1',
+                        title: 'Sviluppo homepage',
+                        task_date: formatDateKey(today),
+                        task_time: '10:00',
+                        duration_hours: 2,
+                        type: 'project',
+                        status: 'pending',
+                        client_name: 'Mario Rossi'
+                    },
+                    {
+                        id: 'demo2',
+                        title: 'Call cliente',
+                        task_date: formatDateKey(tomorrow),
+                        task_time: '14:00',
+                        duration_hours: 1,
+                        type: 'work',
+                        status: 'pending',
+                        client_name: 'Lucia Verdi'
+                    }
+                ];
+
+                clientsData = [
+                    { id: 'client1', name: 'Mario Rossi', email: 'mario@email.com', company: 'Rossi SRL', hourly_rate: 60, status: 'active' },
+                    { id: 'client2', name: 'Lucia Verdi', email: 'lucia@startup.com', company: 'Startup', hourly_rate: 70, status: 'active' }
+                ];
+
+                projectsData = [
+                    { id: 'proj1', name: 'Sito E-commerce', client_name: 'Mario Rossi', status: 'in_progress', progress: 65, budget: 5000 },
+                    { id: 'proj2', name: 'App Mobile', client_name: 'Lucia Verdi', status: 'planning', progress: 20, budget: 8000 }
+                ];
+
+                routinesData = [
+                    { id: 'routine1', title: '☕ Colazione', time_start: '08:00', duration_hours: 0.5, days_of_week: [1,2,3,4,5], is_active: true },
+                    { id: 'routine2', title: '🍽️ Pranzo', time_start: '13:00', duration_hours: 1, days_of_week: [1,2,3,4,5], is_active: true }
+                ];
+
                 generateWeeklyCalendar();
-                console.log('✅ Auto-sync completato');
-            } catch (error) {
-                console.error('❌ Errore auto-sync:', error);
+                updateDashboardStats();
+                populateClientsList();
+                populateProjectsList();
+                
+                showNotification('🎯 Modalità demo attiva - Dati di esempio caricati', 'info');
+            }
+
+            async getTasks(startDate, endDate) {
+                if (!isDbConnected) return tasksData;
+                
+                try {
+                    const start = startDate || formatDateKey(currentWeekStart);
+                    const end = endDate || formatDateKey(new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000));
+                    
+                    const { data, error } = await supabase
+                        .from('tasks')
+                        .select(`
+                            *,
+                            clients(name),
+                            projects(name)
+                        `)
+                        .gte('task_date', start)
+                        .lte('task_date', end)
+                        .order('task_date, task_time');
+                    
+                    if (error) throw error;
+                    
+                    return data.map(task => ({
+                        ...task,
+                        client_name: task.clients?.name,
+                        project_name: task.projects?.name
+                    }));
+                } catch (error) {
+                    console.error('Errore caricamento task:', error);
+                    return tasksData;
+                }
+            }
+
+            async addTask(taskData) {
+                if (!isDbConnected) {
+                    // Modalità offline
+                    const newTask = {
+                        id: 'offline_' + Date.now(),
+                        title: taskData.title,
+                        task_date: taskData.date,
+                        task_time: taskData.time,
+                        duration_hours: taskData.duration,
+                        type: taskData.type,
+                        status: 'pending',
+                        client_name: taskData.clientName,
+                        source: 'manual'
+                    };
+                    
+                    tasksData.push(newTask);
+                    generateWeeklyCalendar();
+                    updateDashboardStats();
+                    showNotification('✅ Task aggiunto (modalità offline)', 'success');
+                    return newTask;
+                }
+
+                try {
+                    showSpinner('addTaskSpinner', true);
+                    
+                    const { data, error } = await supabase
+                        .from('tasks')
+                        .insert([{
+                            title: taskData.title,
+                            description: taskData.description || null,
+                            task_date: taskData.date,
+                            task_time: taskData.time || null,
+                            duration_hours: taskData.duration || 1,
+                            type: taskData.type || 'work',
+                            priority: taskData.priority || 'medium',
+                            client_id: taskData.clientId || null,
+                            project_id: taskData.projectId || null,
+                            source: taskData.source || 'manual'
+                        }])
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    
+                    await this.loadTasksForWeek();
+                    generateWeeklyCalendar();
+                    updateDashboardStats();
+                    
+                    showNotification(`✅ Task "${taskData.title}" aggiunto!`, 'success');
+                    return data;
+                    
+                } catch (error) {
+                    console.error('Errore aggiunta task:', error);
+                    showNotification('❌ Errore aggiunta task: ' + error.message, 'error');
+                    throw error;
+                } finally {
+                    showSpinner('addTaskSpinner', false);
+                }
+            }
+
+            async getClients() {
+                if (!isDbConnected) return clientsData;
+                
+                try {
+                    const { data, error } = await supabase
+                        .from('clients')
+                        .select('*')
+                        .eq('status', 'active')
+                        .order('name');
+                    
+                    if (error) throw error;
+                    return data;
+                } catch (error) {
+                    console.error('Errore caricamento clienti:', error);
+                    return clientsData;
+                }
+            }
+
+            async getProjects() {
+                if (!isDbConnected) return projectsData;
+                
+                try {
+                    const { data, error } = await supabase
+                        .from('projects')
+                        .select(`
+                            *,
+                            clients(name)
+                        `)
+                        .order('created_at', { ascending: false });
+                    
+                    if (error) throw error;
+                    
+                    return data.map(project => ({
+                        ...project,
+                        client_name: project.clients?.name
+                    }));
+                } catch (error) {
+                    console.error('Errore caricamento progetti:', error);
+                    return projectsData;
+                }
+            }
+
+            async getRoutines() {
+                if (!isDbConnected) return routinesData;
+                
+                try {
+                    const { data, error } = await supabase
+                        .from('routines')
+                        .select('*')
+                        .eq('is_active', true)
+                        .order('time_start');
+                    
+                    if (error) throw error;
+                    return data;
+                } catch (error) {
+                    console.error('Errore caricamento routine:', error);
+                    return routinesData;
+                }
+            }
+
+            async loadTasksForWeek() {
+                const startDate = formatDateKey(currentWeekStart);
+                const endDate = formatDateKey(new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000));
+                tasksData = await this.getTasks(startDate, endDate);
             }
         }
 
-        function showConfigurationHelp() {
-            const helpText = `
-🔧 CONFIGURAZIONE RICHIESTA
-
-Per far funzionare l'Agenda AI, devi configurare config.js con le tue credenziali:
-
-1. 📧 GOOGLE APIS:
-   - Vai su Google Cloud Console
-   - Crea API Key e OAuth Client ID
-   - Abilita Calendar API e Gmail API
-
-2. 🗄️ SUPABASE (opzionale):
-   - Crea progetto su Supabase
-   - Copia URL e Anon Key
-
-3. 🐙 GITHUB:
-   - Inserisci username e repository
-
-Apri la console per dettagli tecnici.
-            `;
-            
-            console.group('🔧 GUIDA CONFIGURAZIONE');
-            console.log(helpText);
-            console.log('📁 File da modificare: config.js');
-            console.log('🔍 Esegui runConfigDiagnostics() per verificare lo stato');
-            console.groupEnd();
-        }
+        // ========================================
+        // ISTANZE GLOBALI
+        // ========================================
+        
+        let db;
+        let googleIntegration;
+        let aiScheduler;
 
         // ========================================
-        // 🛠️ FUNZIONI UTILITÀ AGGIORNATE
+        // FUNZIONI UI PRINCIPALI
         // ========================================
 
         function showNotification(message, type = 'info') {
             const bar = document.getElementById('notificationBar');
-            if (!bar) {
-                console.log(`NOTIFICATION [${type.toUpperCase()}]: ${message}`);
-                return;
-            }
+            if (!bar) return;
             
             bar.className = `notification-bar show ${type}`;
             bar.textContent = message;
             
-            const duration = CONFIG.ui?.notifications?.duration || 4000;
             setTimeout(() => {
                 bar.classList.remove('show');
-            }, duration);
+            }, 4000);
         }
 
         function updateSyncStatus(status) {
@@ -597,15 +1995,26 @@ Apri la console per dettagli tecnici.
             
             if (isGoogleConnected) {
                 btn.innerHTML = '✅ Connesso';
-                btn.onclick = () => googleIntegration?.signOut();
+                btn.onclick = () => googleIntegration.signOut();
             } else {
                 btn.innerHTML = '📧 Connetti';
-                btn.onclick = () => googleIntegration?.signIn();
+                btn.onclick = () => googleIntegration.signIn();
+            }
+        }
+
+        function showSpinner(elementId, show) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            if (show) {
+                element.innerHTML = '<span class="spinner"></span>';
+            } else {
+                element.innerHTML = '';
             }
         }
 
         // ========================================
-        // 📅 FUNZIONI CALENDARIO (Invariate ma con logging migliorato)
+        // GESTIONE CALENDARIO
         // ========================================
 
         function formatDateKey(date) {
@@ -613,12 +2022,11 @@ Apri la console per dettagli tecnici.
         }
 
         function formatDateDisplay(date) {
-            const options = { 
+            return date.toLocaleDateString('it-IT', { 
                 weekday: 'long', 
                 day: 'numeric',
                 month: 'long'
-            };
-            return date.toLocaleDateString(CONFIG.app.defaultLanguage || 'it-IT', options);
+            });
         }
 
         function getWeekStart(date) {
@@ -628,111 +2036,454 @@ Apri la console per dettagli tecnici.
             return new Date(d.setDate(diff));
         }
 
-        // ========================================
-        // 📊 EXPORT/IMPORT AVANZATO
-        // ========================================
+        function generateWeeklyCalendar() {
+            const grid = document.getElementById('weeklyGrid');
+            if (!grid) return;
+            
+            grid.innerHTML = '';
 
-        async function exportToJSON() {
-            try {
-                const exportData = {
-                    metadata: {
-                        appName: CONFIG.app.name,
-                        version: CONFIG.app.version,
-                        exportDate: new Date().toISOString(),
-                        timezone: CONFIG.app.timezone
-                    },
-                    data: {
-                        tasks: tasksData,
-                        clients: clientsData,
-                        projects: projectsData,
-                        routines: routinesData,
-                        googleEvents: googleEvents.length > 0 ? googleEvents : null,
-                        emailTasks: emailTasks.length > 0 ? emailTasks : null
-                    },
-                    settings: {
-                        workingHours: CONFIG.app.workingHours,
-                        calendarSettings: CONFIG.ui.calendar
-                    }
-                };
+            // Header vuoto per colonna ore
+            const emptyHeader = document.createElement('div');
+            emptyHeader.className = 'time-header';
+            grid.appendChild(emptyHeader);
 
-                const jsonString = JSON.stringify(exportData, null, 2);
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
+            // Header giorni della settimana
+            const dayNames = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+            const today = new Date();
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(currentWeekStart);
+                date.setDate(date.getDate() + i);
                 
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `agenda_ai_backup_${formatDateKey(new Date())}.json`;
-                link.click();
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'day-header';
                 
-                URL.revokeObjectURL(url);
-                showNotification('📄 Backup JSON esportato!', 'success');
+                if (formatDateKey(date) === formatDateKey(today)) {
+                    dayHeader.classList.add('today');
+                }
                 
-            } catch (error) {
-                console.error('Errore export JSON:', error);
-                showNotification('❌ Errore export JSON', 'error');
+                dayHeader.innerHTML = `
+                    <div class="day-date">${date.getDate()}</div>
+                    <div class="day-name">${dayNames[i]}</div>
+                `;
+                
+                grid.appendChild(dayHeader);
             }
-        }
 
-        async function exportToCSV() {
-            try {
-                const csvData = ['Data,Ora,Titolo,Tipo,Cliente,Durata,Fonte,Status'];
-                
-                // Esporta task
-                tasksData.forEach(task => {
-                    const row = [
-                        task.task_date || '',
-                        task.task_time || '',
-                        `"${(task.title || '').replace(/"/g, '""')}"`,
-                        task.type || '',
-                        `"${(task.client_name || '').replace(/"/g, '""')}"`,
-                        task.duration_hours || '',
-                        task.source || 'manual',
-                        task.status || ''
-                    ].join(',');
-                    csvData.push(row);
-                });
-                
-                // Esporta eventi Google se disponibili
-                if (googleEvents.length > 0) {
-                    csvData.push('\n# Google Calendar Events');
-                    googleEvents.forEach(event => {
-                        if (event.start?.dateTime) {
-                            const startDate = new Date(event.start.dateTime);
-                            const row = [
-                                formatDateKey(startDate),
-                                startDate.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
-                                `"${(event.summary || '').replace(/"/g, '""')}"`,
-                                'google-event',
-                                '',
-                                '',
-                                'google',
-                                'active'
-                            ].join(',');
-                            csvData.push(row);
+            // Righe orarie (7:00 - 22:00)
+            for (let hour = 7; hour <= 22; hour++) {
+                const timeSlot = document.createElement('div');
+                timeSlot.className = 'time-slot';
+                timeSlot.textContent = `${hour.toString().padStart(2, '0')}:00`;
+                grid.appendChild(timeSlot);
+
+                // Celle per ogni giorno
+                for (let day = 0; day < 7; day++) {
+                    const date = new Date(currentWeekStart);
+                    date.setDate(date.getDate() + day);
+                    const dateKey = formatDateKey(date);
+                    const timeKey = `${hour.toString().padStart(2, '0')}:00`;
+
+                    const dayCell = document.createElement('div');
+                    dayCell.className = 'day-cell';
+                    dayCell.onclick = () => selectDateAndTime(date, timeKey);
+                    
+                    const cellContent = document.createElement('div');
+                    cellContent.className = 'cell-content';
+                    
+                    // Aggiungi routine
+                    routinesData.forEach(routine => {
+                        if (routine.time_start === timeKey && routine.days_of_week.includes(date.getDay() || 7)) {
+                            const routineChip = document.createElement('div');
+                            routineChip.className = 'event-chip routine';
+                            routineChip.innerHTML = `${routine.title}<span class="event-source">R</span>`;
+                            routineChip.title = routine.description || routine.title;
+                            cellContent.appendChild(routineChip);
                         }
                     });
+
+                    // Aggiungi task dal database
+                    tasksData.forEach(task => {
+                        if (task.task_date === dateKey && task.task_time && task.task_time.startsWith(timeKey.substring(0, 2))) {
+                            const taskChip = document.createElement('div');
+                            taskChip.className = `event-chip ${task.type || 'work'}`;
+                            
+                            if (task.source === 'email') {
+                                taskChip.classList.add('email-task');
+                            }
+                            
+                            const displayTitle = task.title.length > 12 ? 
+                                task.title.substring(0, 9) + '...' : task.title;
+                            
+                            taskChip.innerHTML = `${displayTitle}<span class="event-source">${task.source === 'email' ? 'E' : 'T'}</span>`;
+                            taskChip.title = `${task.title}${task.client_name ? ' - ' + task.client_name : ''}`;
+                            taskChip.onclick = (e) => {
+                                e.stopPropagation();
+                                showTaskDetails(task);
+                            };
+                            cellContent.appendChild(taskChip);
+                        }
+                    });
+
+                    // Aggiungi eventi Google
+                    googleEvents.forEach(event => {
+                        if (!event.start?.dateTime) return;
+                        
+                        const eventDate = new Date(event.start.dateTime);
+                        const eventHour = eventDate.getHours();
+                        
+                        if (formatDateKey(eventDate) === dateKey && eventHour === hour) {
+                            const googleChip = document.createElement('div');
+                            googleChip.className = 'event-chip google-event';
+                            
+                            const displayTitle = event.summary.length > 12 ? 
+                                event.summary.substring(0, 9) + '...' : event.summary;
+                            
+                            googleChip.innerHTML = `${displayTitle}<span class="event-source">G</span>`;
+                            googleChip.title = `${event.summary} (Google Calendar)`;
+                            googleChip.onclick = (e) => {
+                                e.stopPropagation();
+                                showGoogleEventDetails(event);
+                            };
+                            cellContent.appendChild(googleChip);
+                        }
+                    });
+
+                    // Verifica conflitti
+                    if (cellContent.children.length > 1) {
+                        dayCell.classList.add('conflict');
+                    }
+
+                    dayCell.appendChild(cellContent);
+                    grid.appendChild(dayCell);
+                }
+            }
+
+            updateWeekDisplay();
+            updateSelectedDayInfo();
+        }
+
+        function selectDateAndTime(date, time) {
+            selectedDate = new Date(date);
+            
+            // Rimuovi selezione precedente
+            document.querySelectorAll('.day-cell.selected').forEach(cell => {
+                cell.classList.remove('selected');
+            });
+            
+            // Aggiungi selezione
+            event.currentTarget.classList.add('selected');
+            
+            updateSelectedDayInfo();
+            
+            // Aggiorna form task
+            const taskDateField = document.getElementById('taskDate');
+            const taskTimeField = document.getElementById('taskTime');
+            if (taskDateField) taskDateField.value = formatDateKey(date);
+            if (taskTimeField) taskTimeField.value = time;
+            
+            // Verifica conflitti per lo slot selezionato
+            checkSlotConflicts(date, time);
+        }
+
+        function checkSlotConflicts(date, time) {
+            const dateKey = formatDateKey(date);
+            const hour = parseInt(time.split(':')[0]);
+            const conflictWarning = document.getElementById('conflictWarning');
+            const conflictText = document.getElementById('conflictText');
+            
+            if (!conflictWarning || !conflictText) return;
+            
+            const conflicts = aiScheduler.checkConflicts(hour, 1, 
+                tasksData.filter(t => t.task_date === dateKey),
+                googleEvents.filter(e => e.start?.dateTime && formatDateKey(new Date(e.start.dateTime)) === dateKey),
+                routinesData.filter(r => r.days_of_week.includes(date.getDay() || 7))
+            );
+            
+            if (conflicts.length > 0) {
+                const conflictList = conflicts.map(c => c.title).join(', ');
+                conflictText.textContent = `Conflitto rilevato con: ${conflictList}`;
+                conflictWarning.style.display = 'block';
+            } else {
+                conflictWarning.style.display = 'none';
+            }
+        }
+
+        function updateSelectedDayInfo() {
+            const titleEl = document.getElementById('selectedDayTitle');
+            const tasksEl = document.getElementById('selectedDayTasks');
+            
+            if (!titleEl || !tasksEl) return;
+            
+            const dateStr = formatDateDisplay(selectedDate);
+            const dateKey = formatDateKey(selectedDate);
+            
+            titleEl.textContent = dateStr;
+            
+            // Filtra eventi per il giorno selezionato
+            const dayTasks = tasksData.filter(task => task.task_date === dateKey);
+            const dayGoogleEvents = googleEvents.filter(event => {
+                if (!event.start?.dateTime) return false;
+                return formatDateKey(new Date(event.start.dateTime)) === dateKey;
+            });
+            const dayRoutines = routinesData.filter(routine => 
+                routine.days_of_week.includes(selectedDate.getDay() || 7)
+            );
+            
+            let tasksHTML = '';
+            
+            // Routine del giorno
+            if (dayRoutines.length > 0) {
+                tasksHTML += '<h4 style="color: #95a5a6; margin: 10px 0 5px 0; font-size: 12px;">⏰ ROUTINE</h4>';
+                dayRoutines.forEach(routine => {
+                    tasksHTML += `<div style="padding: 4px 8px; margin: 2px 0; background: #ecf0f1; border-radius: 4px; font-size: 11px;">
+                        <strong>${routine.time_start}</strong> - ${routine.title}
+                    </div>`;
+                });
+            }
+            
+            // Task programmati
+            if (dayTasks.length > 0) {
+                tasksHTML += '<h4 style="color: #3498db; margin: 10px 0 5px 0; font-size: 12px;">📋 TASK</h4>';
+                dayTasks.forEach(task => {
+                    const bgColor = task.source === 'email' ? '#ffeaa7' : 
+                                   task.type === 'project' ? '#fff3e0' : 
+                                   task.type === 'personal' ? '#e8f5e8' : '#e8f4fd';
+                    const statusIcon = task.status === 'completed' ? '✅' : 
+                                      task.status === 'in_progress' ? '🔄' : '⏳';
+                    const sourceIcon = task.source === 'email' ? '📧' : '📋';
+                    
+                    tasksHTML += `<div style="padding: 6px 8px; margin: 4px 0; background: ${bgColor}; border-radius: 4px; border-left: 3px solid #3498db; font-size: 11px; cursor: pointer;" onclick="showTaskDetails(${JSON.stringify(task).replace(/"/g, '&quot;')})">
+                        <strong>${task.task_time || 'Nessun orario'}</strong> ${statusIcon} ${sourceIcon} ${task.title}
+                        ${task.client_name ? '<br><span style="color: #7f8c8d; font-size: 10px;">👤 ' + task.client_name + '</span>' : ''}
+                        ${task.description ? '<br><span style="color: #7f8c8d; font-size: 10px;">' + task.description.substring(0, 50) + '...</span>' : ''}
+                    </div>`;
+                });
+            }
+            
+            // Eventi Google
+            if (dayGoogleEvents.length > 0) {
+                tasksHTML += '<h4 style="color: #db4437; margin: 10px 0 5px 0; font-size: 12px;">📅 GOOGLE CALENDAR</h4>';
+                dayGoogleEvents.forEach(event => {
+                    const startTime = new Date(event.start.dateTime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+                    tasksHTML += `<div style="padding: 6px 8px; margin: 4px 0; background: #fdf2f2; border-radius: 4px; border-left: 3px solid #db4437; font-size: 11px; cursor: pointer;" onclick="showGoogleEventDetails(${JSON.stringify(event).replace(/"/g, '&quot;')})">
+                        <strong>${startTime}</strong> 📅 ${event.summary}
+                        ${event.description ? '<br><span style="color: #7f8c8d; font-size: 10px;">' + event.description.substring(0, 50) + '...</span>' : ''}
+                    </div>`;
+                });
+            }
+            
+            if (!tasksHTML) {
+                tasksHTML = '<div style="color: #7f8c8d; font-style: italic; font-size: 11px; margin-top: 10px;">Giorno libero 🌅</div>';
+            }
+            
+            tasksEl.innerHTML = tasksHTML;
+        }
+
+        function updateWeekDisplay() {
+            const weekEl = document.getElementById('currentWeek');
+            const weekRangeEl = document.getElementById('weekRange');
+            
+            if (!weekEl) return;
+            
+            const weekEnd = new Date(currentWeekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            
+            const startStr = currentWeekStart.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+            const endStr = weekEnd.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+            
+            const weekText = `${startStr} - ${endStr}`;
+            weekEl.textContent = weekText;
+            
+            if (weekRangeEl) {
+                weekRangeEl.textContent = `Settimana ${weekText}`;
+            }
+        }
+
+        function previousWeek() {
+            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+            refreshWeekData();
+        }
+
+        function nextWeek() {
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            refreshWeekData();
+        }
+
+        function goToCurrentWeek() {
+            currentWeekStart = getWeekStart(new Date());
+            selectedDate = new Date();
+            refreshWeekData();
+        }
+
+        async function refreshWeekData() {
+            if (db) await db.loadTasksForWeek();
+            if (googleIntegration && isGoogleConnected) await googleIntegration.loadGoogleData();
+            generateWeeklyCalendar();
+            updateSelectedDayInfo();
+        }
+
+        // ========================================
+        // GESTIONE TAB
+        // ========================================
+
+        function switchMainTab(tabName) {
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        // ========================================
+        // FUNZIONI DASHBOARD
+        // ========================================
+
+        function updateDashboardStats() {
+            const today = formatDateKey(new Date());
+            const todayTasks = tasksData.filter(task => 
+                task.task_date === today && task.status !== 'completed'
+            ).length;
+            
+            const todayGoogleEvents = googleEvents.filter(event => {
+                if (!event.start?.dateTime) return false;
+                return formatDateKey(new Date(event.start.dateTime)) === today;
+            }).length;
+            
+            const emailTasksCount = emailTasks.filter(email => !email.processed).length;
+            
+            // Calcola conflitti
+            let conflictsCount = 0;
+            document.querySelectorAll('.day-cell.conflict').forEach(() => conflictsCount++);
+            
+            document.getElementById('tasksToday').textContent = todayTasks;
+            document.getElementById('googleEvents').textContent = todayGoogleEvents;
+            document.getElementById('emailTasks').textContent = emailTasksCount;
+            document.getElementById('conflictsCount').textContent = conflictsCount;
+            
+            // Statistiche AI
+            const aiGeneratedTasks = tasksData.filter(task => task.source === 'email' || task.source === 'ai').length;
+            document.getElementById('aiGeneratedTasks').textContent = aiGeneratedTasks;
+            document.getElementById('emailsAnalyzed').textContent = emailTasks.length;
+            document.getElementById('optimizedSlots').textContent = Math.floor(Math.random() * 10) + 5; // Placeholder
+        }
+
+        // ========================================
+        // FUNZIONI TASK
+        // ========================================
+
+        async function addNewTask() {
+            const title = document.getElementById('taskTitle').value.trim();
+            const clientId = document.getElementById('taskClient').value || null;
+            const date = document.getElementById('taskDate').value;
+            const time = document.getElementById('taskTime').value || null;
+            const duration = parseFloat(document.getElementById('taskDuration').value) || 1;
+            const syncToGoogle = document.getElementById('syncToGoogle').checked;
+
+            if (!title || !date) {
+                showNotification('⚠️ Inserisci almeno titolo e data!', 'warning');
+                return;
+            }
+
+            try {
+                const taskData = {
+                    title: title,
+                    clientId: clientId,
+                    date: date,
+                    time: time,
+                    duration: duration,
+                    type: 'work'
+                };
+
+                // Aggiungi al database
+                const newTask = await db.addTask(taskData);
+
+                // Sincronizza con Google Calendar se richiesto
+                if (syncToGoogle && isGoogleConnected && googleIntegration) {
+                    try {
+                        const googleEvent = await googleIntegration.createCalendarEvent({
+                            ...taskData,
+                            clientName: clientsData.find(c => c.id === clientId)?.name
+                        });
+                        showNotification('📅 Task sincronizzato con Google Calendar!', 'success');
+                    } catch (error) {
+                        console.error('Errore sincronizzazione Google:', error);
+                        showNotification('⚠️ Task aggiunto ma errore sync Google', 'warning');
+                    }
                 }
 
-                const csvString = csvData.join('\n');
-                const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `agenda_ai_export_${formatDateKey(new Date())}.csv`;
-                link.click();
-                
-                URL.revokeObjectURL(url);
-                showNotification('📊 CSV esportato con successo!', 'success');
+                // Reset form
+                document.getElementById('taskTitle').value = '';
+                document.getElementById('taskTime').value = '';
                 
             } catch (error) {
-                console.error('Errore export CSV:', error);
-                showNotification('❌ Errore export CSV', 'error');
+                console.error('Errore aggiunta task:', error);
+            }
+        }
+
+        function showTaskDetails(task) {
+            const details = `📋 TASK DETAILS\n\n` +
+                          `Titolo: ${task.title}\n` +
+                          `Data: ${new Date(task.task_date).toLocaleDateString('it-IT')}\n` +
+                          `Orario: ${task.task_time || 'Non specificato'}\n` +
+                          `Durata: ${task.duration_hours || 1}h\n` +
+                          `Tipo: ${task.type}\n` +
+                          `Status: ${task.status}\n` +
+                          `Fonte: ${task.source || 'Manuale'}\n` +
+                          `${task.client_name ? 'Cliente: ' + task.client_name + '\n' : ''}` +
+                          `${task.description ? 'Descrizione: ' + task.description : ''}`;
+            
+            if (confirm(details + '\n\n🗑️ Vuoi eliminare questo task?')) {
+                // Implementa eliminazione task
+                deleteTask(task.id);
+            }
+        }
+
+        function showGoogleEventDetails(event) {
+            const startTime = new Date(event.start.dateTime);
+            const endTime = new Date(event.end.dateTime);
+            
+            const details = `📅 GOOGLE CALENDAR EVENT\n\n` +
+                          `Titolo: ${event.summary}\n` +
+                          `Data: ${startTime.toLocaleDateString('it-IT')}\n` +
+                          `Orario: ${startTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}\n` +
+                          `${event.description ? 'Descrizione: ' + event.description + '\n' : ''}` +
+                          `${event.location ? 'Luogo: ' + event.location + '\n' : ''}` +
+                          `ID: ${event.id}`;
+            
+            alert(details);
+        }
+
+        async function deleteTask(taskId) {
+            try {
+                if (isDbConnected) {
+                    const { error } = await supabase
+                        .from('tasks')
+                        .delete()
+                        .eq('id', taskId);
+                    
+                    if (error) throw error;
+                } else {
+                    // Modalità offline
+                    const index = tasksData.findIndex(t => t.id === taskId);
+                    if (index > -1) {
+                        tasksData.splice(index, 1);
+                    }
+                }
+                
+                await db.loadTasksForWeek();
+                generateWeeklyCalendar();
+                updateDashboardStats();
+                showNotification('🗑️ Task eliminato!', 'success');
+                
+            } catch (error) {
+                console.error('Errore eliminazione task:', error);
+                showNotification('❌ Errore eliminazione task', 'error');
             }
         }
 
         // ========================================
-        // 🚀 FUNZIONI API PUBBLICHE
+        // FUNZIONI GOOGLE INTEGRATION
         // ========================================
 
         async function toggleGoogleAuth() {
@@ -748,27 +2499,859 @@ Apri la console per dettagli tecnici.
             }
         }
 
+        async function connectGoogle() {
+            if (!googleIntegration) {
+                showNotification('🔄 Inizializzando Google APIs...', 'info');
+                googleIntegration = new GoogleIntegration();
+                return;
+            }
+
+            if (!isGoogleConnected) {
+                await googleIntegration.signIn();
+            } else {
+                showNotification('✅ Google già connesso!', 'info');
+            }
+        }
+
+        async function syncGoogleCalendar() {
+            if (!isGoogleConnected) {
+                showNotification('❌ Connetti prima Google Calendar!', 'error');
+                return;
+            }
+
+            try {
+                showNotification('🔄 Sincronizzando Google Calendar...', 'info');
+                await googleIntegration.loadGoogleData();
+                showNotification('✅ Google Calendar sincronizzato!', 'success');
+            } catch (error) {
+                console.error('Errore sync Google Calendar:', error);
+                showNotification('❌ Errore sincronizzazione Google Calendar', 'error');
+            }
+        }
+
+        async function fullGoogleSync() {
+            if (!isGoogleConnected) {
+                await connectGoogle();
+                return;
+            }
+
+            try {
+                showNotification('🔄 Sincronizzazione completa Google...', 'info');
+                
+                // Sincronizza Calendar + Gmail
+                await Promise.all([
+                    googleIntegration.loadGoogleData(),
+                    analyzeEmails()
+                ]);
+                
+                showNotification('✅ Sincronizzazione completa Google terminata!', 'success');
+                updateGoogleTab();
+                
+            } catch (error) {
+                console.error('Errore sync completo Google:', error);
+                showNotification('❌ Errore sincronizzazione completa', 'error');
+            }
+        }
+
+        async function analyzeEmails() {
+            if (!isGoogleConnected) {
+                showNotification('❌ Connetti prima Gmail!', 'error');
+                return;
+            }
+
+            try {
+                showNotification('📧 Analizzando email per task...', 'info');
+                emailTasks = await googleIntegration.analyzeGmailForTasks();
+                updateEmailAnalysisList();
+                updateDashboardStats();
+                showNotification(`📧 Trovate ${emailTasks.length} email con potenziali task!`, 'success');
+            } catch (error) {
+                console.error('Errore analisi email:', error);
+                showNotification('❌ Errore analisi email', 'error');
+            }
+        }
+
+        function updateGoogleTab() {
+            // Aggiorna stato connessioni
+            document.getElementById('calendarStatus').textContent = isGoogleConnected ? 'Connesso' : 'Disconnesso';
+            document.getElementById('gmailStatus').textContent = isGoogleConnected ? 'Connesso' : 'Disconnesso';
+            document.getElementById('googleEventsCount').textContent = googleEvents.length;
+            
+            updateEmailAnalysisList();
+        }
+
+        function updateEmailAnalysisList() {
+            const container = document.getElementById('emailAnalysisList');
+            if (!container) return;
+            
+            if (!isGoogleConnected) {
+                container.innerHTML = '<div style="text-align: center; color: #bdc3c7; font-style: italic; padding: 20px;">Connetti Gmail per analizzare le email</div>';
+                return;
+            }
+            
+            if (emailTasks.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #bdc3c7; font-style: italic; padding: 20px;">Nessuna email con task rilevata</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            emailTasks.forEach(email => {
+                const emailEl = document.createElement('div');
+                emailEl.className = 'email-item';
+                
+                const urgencyIcon = email.analysis.priority === 'high' ? '🔴' : '🟡';
+                const typeIcon = email.analysis.isMeeting ? '🤝' : '💼';
+                
+                emailEl.innerHTML = `
+                    <div class="email-subject">${urgencyIcon} ${email.subject}</div>
+                    <div class="email-from">📧 ${email.analysis.clientName}</div>
+                    <div class="email-analysis">
+                        ${typeIcon} ${email.analysis.suggestedType} | ⏱️ ${email.analysis.suggestedDuration}h | 📅 ${email.date.toLocaleDateString('it-IT')}
+                    </div>
+                    <div class="email-actions">
+                        <button class="btn-small" onclick="createTaskFromEmail('${email.id}')" ${email.processed ? 'disabled' : ''}>
+                            ${email.processed ? '✅ Processata' : '📋 Crea Task'}
+                        </button>
+                        <button class="btn-small" onclick="dismissEmail('${email.id}')">❌ Ignora</button>
+                    </div>
+                `;
+                
+                container.appendChild(emailEl);
+            });
+        }
+
+        async function createTaskFromEmail(emailId) {
+            const email = emailTasks.find(e => e.id === emailId);
+            if (!email) return;
+
+            try {
+                const analysis = email.analysis;
+                
+                // Trova slot ottimale per il task
+                const suggestions = aiScheduler.findOptimalSlot({
+                    duration: analysis.suggestedDuration,
+                    priority: analysis.priority,
+                    type: analysis.suggestedType
+                });
+
+                if (suggestions.length > 0) {
+                    const bestSlot = suggestions[0];
+                    
+                    const taskData = {
+                        title: analysis.suggestedTitle,
+                        date: formatDateKey(bestSlot.date),
+                        time: bestSlot.time,
+                        duration: analysis.suggestedDuration,
+                        type: analysis.suggestedType,
+                        priority: analysis.priority,
+                        source: 'email',
+                        description: `Task creato automaticamente dall'email di ${analysis.clientName}`
+                    };
+
+                    await db.addTask(taskData);
+                    
+                    // Marca email come processata
+                    email.processed = true;
+                    updateEmailAnalysisList();
+                    
+                    showNotification(`✅ Task "${analysis.suggestedTitle}" creato per ${bestSlot.date} alle ${bestSlot.time}!`, 'success');
+                } else {
+                    showNotification('❌ Nessuno slot disponibile trovato', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Errore creazione task da email:', error);
+                showNotification('❌ Errore creazione task da email', 'error');
+            }
+        }
+
+        function dismissEmail(emailId) {
+            const emailIndex = emailTasks.findIndex(e => e.id === emailId);
+            if (emailIndex > -1) {
+                emailTasks.splice(emailIndex, 1);
+                updateEmailAnalysisList();
+                updateDashboardStats();
+                showNotification('📧 Email ignorata', 'info');
+            }
+        }
+
+        async function processEmailTasks() {
+            if (emailTasks.length === 0) {
+                showNotification('📧 Nessuna email da processare', 'info');
+                return;
+            }
+
+            try {
+                showNotification('🤖 Processando email automaticamente...', 'info');
+                
+                let processedCount = 0;
+                for (const email of emailTasks.filter(e => !e.processed)) {
+                    await createTaskFromEmail(email.id);
+                    processedCount++;
+                }
+                
+                showNotification(`✅ ${processedCount} task creati automaticamente dalle email!`, 'success');
+                
+            } catch (error) {
+                console.error('Errore processing email:', error);
+                showNotification('❌ Errore processing automatico email', 'error');
+            }
+        }
+
+        // ========================================
+        // FUNZIONI AI ASSISTANT
+        // ========================================
+
+        async function processAIRequest() {
+            const prompt = document.getElementById('aiPrompt').value.trim();
+            if (!prompt) {
+                showNotification('⚠️ Inserisci una richiesta!', 'warning');
+                return;
+            }
+
+            try {
+                showNotification('🤖 Elaborando richiesta AI...', 'info');
+                
+                // Analisi semplificata del prompt
+                const aiResponse = analyzeAIPrompt(prompt);
+                
+                if (aiResponse.action === 'create_task') {
+                    await executeAITaskCreation(aiResponse);
+                } else if (aiResponse.action === 'schedule_meeting') {
+                    await executeAIScheduleMeeting(aiResponse);
+                } else if (aiResponse.action === 'optimize_schedule') {
+                    await executeAIOptimization(aiResponse);
+                } else {
+                    showAISuggestion('AI Assistant', `Ho analizzato la tua richiesta: "${prompt}". Suggerisco di creare un task manualmente o utilizzare una delle funzioni specifiche.`);
+                }
+                
+                document.getElementById('aiPrompt').value = '';
+                
+            } catch (error) {
+                console.error('Errore elaborazione AI:', error);
+                showNotification('❌ Errore elaborazione AI', 'error');
+            }
+        }
+
+        function analyzeAIPrompt(prompt) {
+            const lowerPrompt = prompt.toLowerCase();
+            
+            // Keywords per diverse azioni
+            const taskKeywords = ['crea', 'aggiungi', 'task', 'lavoro', 'progetto'];
+            const meetingKeywords = ['meeting', 'riunione', 'call', 'incontro', 'appuntamento'];
+            const optimizeKeywords = ['ottimizza', 'organizza', 'migliora', 'pianifica'];
+            
+            if (taskKeywords.some(kw => lowerPrompt.includes(kw))) {
+                return {
+                    action: 'create_task',
+                    title: extractTaskTitle(prompt),
+                    type: 'work',
+                    duration: extractDuration(prompt) || 1
+                };
+            } else if (meetingKeywords.some(kw => lowerPrompt.includes(kw))) {
+                return {
+                    action: 'schedule_meeting',
+                    title: extractTaskTitle(prompt),
+                    type: 'project',
+                    duration: 1,
+                    client: extractClientName(prompt)
+                };
+            } else if (optimizeKeywords.some(kw => lowerPrompt.includes(kw))) {
+                return {
+                    action: 'optimize_schedule'
+                };
+            }
+            
+            return {
+                action: 'generic',
+                message: prompt
+            };
+        }
+
+        function extractTaskTitle(prompt) {
+            // Estrae titolo semplificato dal prompt
+            const cleanPrompt = prompt.replace(/^(crea|aggiungi|programma|schedule)\s+/i, '');
+            return cleanPrompt.charAt(0).toUpperCase() + cleanPrompt.slice(1);
+        }
+
+        function extractDuration(prompt) {
+            const durationMatch = prompt.match(/(\d+)\s*(ora|ore|hour|hours|h)/i);
+            return durationMatch ? parseInt(durationMatch[1]) : null;
+        }
+
+        function extractClientName(prompt) {
+            // Cerca nomi di clienti nel prompt
+            for (const client of clientsData) {
+                if (prompt.toLowerCase().includes(client.name.toLowerCase())) {
+                    return client.name;
+                }
+            }
+            return null;
+        }
+
+        async function executeAITaskCreation(aiResponse) {
+            const suggestions = aiScheduler.findOptimalSlot({
+                duration: aiResponse.duration,
+                type: aiResponse.type,
+                priority: 'medium'
+            });
+
+            if (suggestions.length > 0) {
+                const bestSlot = suggestions[0];
+                showAISuggestion(
+                    'Task creato con successo!',
+                    `Ho trovato lo slot ottimale per "${aiResponse.title}":\n\n📅 ${formatDateDisplay(bestSlot.date)}\n⏰ ${bestSlot.time}\n⏱️ ${aiResponse.duration}h\n\n${bestSlot.reason}`
+                );
+                
+                currentAISuggestion = {
+                    action: 'create_task',
+                    taskData: {
+                        title: aiResponse.title,
+                        date: formatDateKey(bestSlot.date),
+                        time: bestSlot.time,
+                        duration: aiResponse.duration,
+                        type: aiResponse.type,
+                        source: 'ai'
+                    }
+                };
+            } else {
+                showNotification('❌ Nessuno slot disponibile trovato', 'error');
+            }
+        }
+
+        async function executeAIScheduleMeeting(aiResponse) {
+            const clientName = aiResponse.client;
+            let clientId = null;
+            
+            if (clientName) {
+                const client = clientsData.find(c => c.name.toLowerCase().includes(clientName.toLowerCase()));
+                clientId = client?.id;
+            }
+
+            const suggestions = aiScheduler.findOptimalSlot({
+                duration: 1,
+                type: 'project',
+                priority: 'high'
+            });
+
+            if (suggestions.length > 0) {
+                const bestSlot = suggestions[0];
+                showAISuggestion(
+                    'Meeting programmato!',
+                    `Ho trovato lo slot ottimale per il meeting "${aiResponse.title}":\n\n📅 ${formatDateDisplay(bestSlot.date)}\n⏰ ${bestSlot.time}\n👤 ${clientName || 'Cliente da specificare'}\n\n${bestSlot.reason}`
+                );
+                
+                currentAISuggestion = {
+                    action: 'create_task',
+                    taskData: {
+                        title: aiResponse.title,
+                        date: formatDateKey(bestSlot.date),
+                        time: bestSlot.time,
+                        duration: 1,
+                        type: 'project',
+                        clientId: clientId,
+                        source: 'ai'
+                    }
+                };
+            }
+        }
+
+        async function executeAIOptimization(aiResponse) {
+            const suggestions = aiScheduler.generateWeekOptimization();
+            
+            if (suggestions.length > 0) {
+                let optimizationText = 'Analisi completata! Ecco i suggerimenti:\n\n';
+                suggestions.forEach(suggestion => {
+                    optimizationText += `• ${suggestion.message}\n`;
+                });
+                
+                showAISuggestion('Ottimizzazione Calendario', optimizationText);
+            } else {
+                showNotification('✅ Il tuo calendario è già ben ottimizzato!', 'success');
+            }
+        }
+
+        function showAISuggestion(title, content) {
+            document.getElementById('aiSuggestionTitle').textContent = title;
+            document.getElementById('aiSuggestionContent').textContent = content;
+            document.getElementById('aiPopup').style.display = 'block';
+        }
+
+        function closeAIPopup() {
+            document.getElementById('aiPopup').style.display = 'none';
+            currentAISuggestion = null;
+        }
+
+        async function acceptAISuggestion() {
+            if (!currentAISuggestion) return;
+
+            try {
+                if (currentAISuggestion.action === 'create_task') {
+                    await db.addTask(currentAISuggestion.taskData);
+                    showNotification('✅ Suggerimento AI accettato e task creato!', 'success');
+                }
+                
+                closeAIPopup();
+                
+            } catch (error) {
+                console.error('Errore accettazione suggerimento AI:', error);
+                showNotification('❌ Errore accettazione suggerimento', 'error');
+            }
+        }
+
+        async function suggestOptimalTime() {
+            const title = document.getElementById('taskTitle').value.trim();
+            const duration = parseFloat(document.getElementById('taskDuration').value) || 1;
+            
+            if (!title) {
+                showNotification('⚠️ Inserisci un titolo per il task!', 'warning');
+                return;
+            }
+
+            const suggestions = aiScheduler.findOptimalSlot({
+                duration: duration,
+                type: 'work',
+                priority: 'medium'
+            });
+
+            if (suggestions.length > 0) {
+                const bestSlot = suggestions[0];
+                
+                // Aggiorna automaticamente i campi del form
+                document.getElementById('taskDate').value = formatDateKey(bestSlot.date);
+                document.getElementById('taskTime').value = bestSlot.time;
+                
+                showAISuggestion(
+                    'Slot Ottimale Trovato!',
+                    `Per il task "${title}" suggerisco:\n\n📅 ${formatDateDisplay(bestSlot.date)}\n⏰ ${bestSlot.time}\n⏱️ ${duration}h\n\n${bestSlot.reason}\n\nI campi del form sono stati aggiornati automaticamente.`
+                );
+                
+                // Seleziona lo slot nel calendario
+                selectDateAndTime(bestSlot.date, bestSlot.time);
+                
+            } else {
+                showNotification('❌ Nessuno slot ottimale disponibile', 'error');
+            }
+        }
+
+        async function analyzeOptimalSlots() {
+            try {
+                showNotification('🤖 Analizzando slot ottimali...', 'info');
+                
+                const suggestions = aiScheduler.generateWeekOptimization();
+                updateAISuggestionsList(suggestions);
+                
+                showNotification('✅ Analisi completata!', 'success');
+                
+            } catch (error) {
+                console.error('Errore analisi slot:', error);
+                showNotification('❌ Errore analisi', 'error');
+            }
+        }
+
+        function updateAISuggestionsList(suggestions) {
+            const container = document.getElementById('aiSuggestionsList');
+            if (!container) return;
+            
+            if (suggestions.length === 0) {
+                container.innerHTML = '<div style="color: #27ae60; font-style: italic; font-size: 11px;">✅ Il tuo calendario è ottimizzato perfettamente!</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            suggestions.forEach(suggestion => {
+                const suggestionEl = document.createElement('div');
+                suggestionEl.style.cssText = 'background: #1a252f; border-radius: 4px; padding: 8px; margin-bottom: 6px; border-left: 3px solid #9b59b6;';
+                
+                const severityColor = {
+                    'high': '#e74c3c',
+                    'medium': '#f39c12',
+                    'low': '#3498db'
+                }[suggestion.severity] || '#3498db';
+                
+                suggestionEl.innerHTML = `
+                    <div style="color: ${severityColor}; font-weight: bold; font-size: 10px; margin-bottom: 4px;">
+                        ${suggestion.type.toUpperCase()} - ${suggestion.severity.toUpperCase()}
+                    </div>
+                    <div style="color: #ecf0f1; font-size: 11px; line-height: 1.3;">
+                        ${suggestion.message}
+                    </div>
+                    <div style="color: #bdc3c7; font-size: 9px; margin-top: 4px;">
+                        📅 ${new Date(suggestion.date).toLocaleDateString('it-IT')}
+                    </div>
+                `;
+                
+                container.appendChild(suggestionEl);
+            });
+        }
+
+        async function optimizeWeekSchedule() {
+            try {
+                showNotification('🤖 Ottimizzando calendario settimanale...', 'info');
+                
+                const suggestions = aiScheduler.generateWeekOptimization();
+                updateAISuggestionsList(suggestions);
+                
+                // Evidenzia giorni con problemi nel calendario
+                highlightProblemsInCalendar(suggestions);
+                
+                showNotification(`✅ Ottimizzazione completata! ${suggestions.length} suggerimenti trovati.`, 'success');
+                
+            } catch (error) {
+                console.error('Errore ottimizzazione:', error);
+                showNotification('❌ Errore ottimizzazione', 'error');
+            }
+        }
+
+        function highlightProblemsInCalendar(suggestions) {
+            // Rimuovi evidenziazioni precedenti
+            document.querySelectorAll('.day-header.problem').forEach(header => {
+                header.classList.remove('problem');
+            });
+            
+            // Evidenzia giorni con problemi
+            suggestions.forEach(suggestion => {
+                const problemDate = new Date(suggestion.date);
+                const dayHeaders = document.querySelectorAll('.day-header');
+                
+                dayHeaders.forEach(header => {
+                    const dayNum = parseInt(header.querySelector('.day-date').textContent);
+                    if (dayNum === problemDate.getDate()) {
+                        header.style.background = suggestion.severity === 'high' ? '#e74c3c' : '#f39c12';
+                        header.title = suggestion.message;
+                    }
+                });
+            });
+        }
+
+        async function detectConflicts() {
+            try {
+                showNotification('⚠️ Rilevando conflitti nel calendario...', 'info');
+                
+                let conflictsFound = 0;
+                const conflictSummary = [];
+                
+                // Analizza ogni giorno della settimana
+                for (let day = 0; day < 7; day++) {
+                    const date = new Date(currentWeekStart);
+                    date.setDate(date.getDate() + day);
+                    const dateKey = formatDateKey(date);
+                    
+                    // Ottieni tutti gli eventi del giorno
+                    const dayTasks = tasksData.filter(task => task.task_date === dateKey);
+                    const dayGoogleEvents = googleEvents.filter(event => {
+                        if (!event.start?.dateTime) return false;
+                        return formatDateKey(new Date(event.start.dateTime)) === dateKey;
+                    });
+                    const dayRoutines = routinesData.filter(routine => 
+                        routine.days_of_week.includes(date.getDay() || 7)
+                    );
+                    
+                    // Controlla conflitti orari
+                    for (let hour = 7; hour <= 22; hour++) {
+                        const conflicts = aiScheduler.checkConflicts(hour, 1, dayTasks, dayGoogleEvents, dayRoutines);
+                        
+                        if (conflicts.length > 1) {
+                            conflictsFound++;
+                            conflictSummary.push({
+                                date: dateKey,
+                                hour: hour,
+                                conflicts: conflicts
+                            });
+                        }
+                    }
+                }
+                
+                if (conflictsFound > 0) {
+                    let conflictText = `⚠️ ${conflictsFound} conflitti rilevati:\n\n`;
+                    conflictSummary.slice(0, 5).forEach(conflict => {
+                        const date = new Date(conflict.date).toLocaleDateString('it-IT');
+                        conflictText += `📅 ${date} ore ${conflict.hour}:00\n`;
+                        conflict.conflicts.forEach(c => {
+                            conflictText += `  • ${c.title}\n`;
+                        });
+                        conflictText += '\n';
+                    });
+                    
+                    alert(conflictText);
+                } else {
+                    showNotification('✅ Nessun conflitto rilevato!', 'success');
+                }
+                
+                // Aggiorna visualizzazione conflitti nel calendario
+                generateWeeklyCalendar();
+                
+            } catch (error) {
+                console.error('Errore rilevamento conflitti:', error);
+                showNotification('❌ Errore rilevamento conflitti', 'error');
+            }
+        }
+
+        async function analyzeAndSuggest() {
+            try {
+                showNotification('🤖 Analisi intelligente in corso...', 'info');
+                
+                // Combina più analisi
+                await Promise.all([
+                    analyzeOptimalSlots(),
+                    optimizeWeekSchedule(),
+                    detectConflicts()
+                ]);
+                
+                showNotification('✅ Analisi intelligente completata!', 'success');
+                
+            } catch (error) {
+                console.error('Errore analisi e suggerimenti:', error);
+                showNotification('❌ Errore analisi intelligente', 'error');
+            }
+        }
+
+        // ========================================
+        // FUNZIONI CLIENTI E PROGETTI (SIMPLIFIED)
+        // ========================================
+
+        function populateClientsList() {
+            const container = document.getElementById('clientsList');
+            if (!container) return;
+            
+            if (clientsData.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #bdc3c7; font-style: italic; padding: 20px;">Nessun cliente trovato</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            clientsData.forEach(client => {
+                const clientEl = document.createElement('div');
+                clientEl.style.cssText = 'background: #2c3e50; border-radius: 4px; padding: 8px; margin-bottom: 6px; cursor: pointer;';
+                clientEl.innerHTML = `
+                    <div style="color: #ecf0f1; font-weight: bold; font-size: 11px;">${client.name}</div>
+                    <div style="color: #bdc3c7; font-size: 10px;">${client.email}</div>
+                    <div style="color: #3498db; font-size: 9px;">€${client.hourly_rate}/ora</div>
+                `;
+                clientEl.onclick = () => showClientDetails(client);
+                container.appendChild(clientEl);
+            });
+            
+            // Popola dropdown nel form task
+            populateClientsDropdown();
+        }
+
+        function populateClientsDropdown() {
+            const select = document.getElementById('taskClient');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">Seleziona cliente...</option>';
+            clientsData.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client.id;
+                option.textContent = client.name;
+                select.appendChild(option);
+            });
+        }
+
+        function populateProjectsList() {
+            const container = document.getElementById('projectsList');
+            if (!container) return;
+            
+            if (projectsData.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #bdc3c7; font-style: italic; padding: 20px;">Nessun progetto trovato</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            projectsData.forEach(project => {
+                const projectEl = document.createElement('div');
+                projectEl.style.cssText = 'background: #2c3e50; border-radius: 4px; padding: 8px; margin-bottom: 6px; cursor: pointer;';
+                
+                const statusColor = {
+                    'planning': '#3498db',
+                    'in_progress': '#f39c12',
+                    'review': '#9b59b6',
+                    'completed': '#27ae60',
+                    'paused': '#95a5a6'
+                }[project.status] || '#3498db';
+                
+                projectEl.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <div style="color: #ecf0f1; font-weight: bold; font-size: 11px;">${project.name}</div>
+                        <div style="background: ${statusColor}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 8px;">
+                            ${project.status.toUpperCase()}
+                        </div>
+                    </div>
+                    <div style="color: #bdc3c7; font-size: 10px;">👤 ${project.client_name || 'Cliente sconosciuto'}</div>
+                    <div style="color: #3498db; font-size: 9px;">€${project.budget || 0} | ${project.progress || 0}%</div>
+                `;
+                projectEl.onclick = () => showProjectDetails(project);
+                container.appendChild(projectEl);
+            });
+        }
+
+        function showClientDetails(client) {
+            const details = `👤 CLIENTE\n\n` +
+                          `Nome: ${client.name}\n` +
+                          `Email: ${client.email}\n` +
+                          `Azienda: ${client.company || 'Non specificata'}\n` +
+                          `Tariffa: €${client.hourly_rate}/ora\n` +
+                          `Status: ${client.status}`;
+            alert(details);
+        }
+
+        function showProjectDetails(project) {
+            const details = `📋 PROGETTO\n\n` +
+                          `Nome: ${project.name}\n` +
+                          `Cliente: ${project.client_name || 'Sconosciuto'}\n` +
+                          `Status: ${project.status}\n` +
+                          `Progresso: ${project.progress || 0}%\n` +
+                          `Budget: €${project.budget || 0}`;
+            alert(details);
+        }
+
+        function showAddClientForm() {
+            const name = prompt('👤 Nome cliente:', '');
+            if (!name) return;
+            
+            const email = prompt('📧 Email cliente:', '');
+            if (!email) return;
+            
+            // In modalità demo, aggiungi direttamente
+            const newClient = {
+                id: 'client_' + Date.now(),
+                name: name.trim(),
+                email: email.trim(),
+                company: '',
+                hourly_rate: 50,
+                status: 'active'
+            };
+            
+            clientsData.push(newClient);
+            populateClientsList();
+            showNotification(`✅ Cliente "${name}" aggiunto!`, 'success');
+        }
+
+        function showAddProjectForm() {
+            const name = prompt('📋 Nome progetto:', '');
+            if (!name) return;
+            
+            if (clientsData.length === 0) {
+                showNotification('⚠️ Aggiungi prima almeno un cliente!', 'warning');
+                return;
+            }
+            
+            // Seleziona cliente
+            let clientsList = 'Seleziona cliente:\n\n';
+            clientsData.forEach((client, index) => {
+                clientsList += `${index + 1}. ${client.name}\n`;
+            });
+            
+            const clientIndex = prompt(clientsList + '\nInserisci numero:', '1');
+            const selectedClient = clientsData[parseInt(clientIndex) - 1];
+            
+            if (!selectedClient) {
+                showNotification('❌ Cliente non valido!', 'error');
+                return;
+            }
+            
+            // In modalità demo, aggiungi direttamente
+            const newProject = {
+                id: 'project_' + Date.now(),
+                name: name.trim(),
+                client_name: selectedClient.name,
+                status: 'planning',
+                progress: 0,
+                budget: 0
+            };
+            
+            projectsData.push(newProject);
+            populateProjectsList();
+            showNotification(`✅ Progetto "${name}" aggiunto!`, 'success');
+        }
+
+        // ========================================
+        // FUNZIONI UTILITÀ GENERALI
+        // ========================================
+
         async function refreshAllData() {
             try {
+                showSpinner('refreshSpinner', true);
                 showNotification('🔄 Aggiornando tutti i dati...', 'info');
                 
-                if (db) await db.loadInitialData();
-                if (isGoogleConnected && googleIntegration) await googleIntegration.loadGoogleData();
+                // Ricarica dati database
+                if (db) {
+                    await db.loadInitialData();
+                }
                 
+                // Ricarica dati Google se connesso
+                if (isGoogleConnected && googleIntegration) {
+                    await googleIntegration.loadGoogleData();
+                }
+                
+                // Aggiorna interfaccia
                 generateWeeklyCalendar();
                 updateDashboardStats();
+                updateGoogleTab();
                 
                 showNotification('✅ Tutti i dati aggiornati!', 'success');
                 
             } catch (error) {
                 console.error('Errore refresh dati:', error);
-                showNotification('❌ Errore aggiornamento', 'error');
+                showNotification('❌ Errore aggiornamento dati', 'error');
+            } finally {
+                showSpinner('refreshSpinner', false);
+            }
+        }
+
+        async function loadClients() {
+            try {
+                showNotification('🔄 Ricaricando clienti...', 'info');
+                if (db) {
+                    clientsData = await db.getClients();
+                }
+                populateClientsList();
+                updateDashboardStats();
+                showNotification('✅ Clienti aggiornati!', 'success');
+            } catch (error) {
+                console.error('Errore ricarica clienti:', error);
+                showNotification('❌ Errore ricarica clienti', 'error');
             }
         }
 
         // ========================================
-        // 📱 EVENT LISTENERS E RESPONSIVE
+        // EVENT LISTENERS E INIZIALIZZAZIONE
         // ========================================
+
+        async function init() {
+            console.log('🔄 Inizializzazione Agenda AI Google Integration...');
+            
+            try {
+                // Imposta settimana corrente
+                currentWeekStart = getWeekStart(new Date());
+                selectedDate = new Date();
+                
+                // Inizializza database
+                db = new AgendaDatabase();
+                
+                // Inizializza AI Scheduler
+                aiScheduler = new AIScheduler();
+                
+                // Inizializza Google Integration
+                googleIntegration = new GoogleIntegration();
+                
+                // Imposta data nei form
+                const taskDateField = document.getElementById('taskDate');
+                if (taskDateField) {
+                    taskDateField.value = formatDateKey(selectedDate);
+                }
+                
+                // Event listeners
+                setupEventListeners();
+                
+                console.log('✅ Agenda AI Google Integration inizializzata');
+                
+            } catch (error) {
+                console.error('Errore inizializzazione:', error);
+                showNotification('❌ Errore inizializzazione: ' + error.message, 'error');
+            }
+        }
 
         function setupEventListeners() {
             // Online/Offline events
@@ -783,95 +3366,65 @@ Apri la console per dettagli tecnici.
                 showNotification('🔴 Modalità offline', 'warning');
             });
 
-            // Gestione errori globali
-            window.addEventListener('error', (event) => {
-                if (CONFIG.app.debug) {
-                    console.error('🐛 Errore globale:', event.error);
+            // Chiudi popup AI cliccando fuori
+            document.addEventListener('click', function(event) {
+                const aiPopup = document.getElementById('aiPopup');
+                if (event.target === aiPopup) {
+                    closeAIPopup();
                 }
             });
 
-            // Gestione promesse rifiutate
-            window.addEventListener('unhandledrejection', (event) => {
-                if (CONFIG.app.debug) {
-                    console.error('🐛 Promise rejection:', event.reason);
+            // Chiudi popup con ESC
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    closeAIPopup();
                 }
             });
-        }
 
-        // ========================================
-        // 🎯 PLACEHOLDER PER FUNZIONI MANCANTI
-        // ========================================
-        
-        // Queste funzioni devono essere implementate basandoti sul tuo codice originale
-        function generateWeeklyCalendar() {
-            console.log('📅 Generazione calendario settimanale...');
-            // TODO: Implementa la logica del calendario
-        }
-
-        function updateDashboardStats() {
-            console.log('📊 Aggiornamento statistiche dashboard...');
-            // TODO: Implementa aggiornamento statistiche
-        }
-
-        function updateGoogleTab() {
-            console.log('📧 Aggiornamento tab Google...');
-            // TODO: Implementa aggiornamento interfaccia Google
-        }
-
-        function previousWeek() {
-            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
-            generateWeeklyCalendar();
-        }
-
-        function nextWeek() {
-            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-            generateWeeklyCalendar();
-        }
-
-        function goToCurrentWeek() {
-            currentWeekStart = getWeekStart(new Date());
-            selectedDate = new Date();
-            generateWeeklyCalendar();
-        }
-
-        // Classi AI Scheduler e altre funzioni dal tuo codice originale
-        class AIScheduler {
-            constructor() {
-                this.workingHours = CONFIG.app.workingHours;
-                console.log('🤖 AI Scheduler inizializzato');
+            // Enter nel prompt AI
+            const aiPromptField = document.getElementById('aiPrompt');
+            if (aiPromptField) {
+                aiPromptField.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter' && event.ctrlKey) {
+                        processAIRequest();
+                    }
+                });
             }
-            // TODO: Implementa metodi AI Scheduler
+
+            // Enter nel task title
+            const taskTitleField = document.getElementById('taskTitle');
+            if (taskTitleField) {
+                taskTitleField.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter') {
+                        addNewTask();
+                    }
+                });
+            }
         }
 
         // ========================================
-        // 🎬 INIZIALIZZAZIONE FINALE
+        // INIZIALIZZAZIONE PRINCIPALE
         // ========================================
 
         document.addEventListener('DOMContentLoaded', function() {
-            console.log(`=== ${CONFIG?.app?.name || 'AGENDA AI'} ===`);
-            
-            // Attendi che config.js sia completamente caricato
-            if (typeof CONFIG === 'undefined') {
-                console.error('❌ config.js non caricato!');
-                showNotification('❌ Errore: config.js non trovato', 'error');
-                return;
-            }
+            console.log('=== AGENDA AI GOOGLE INTEGRATION ===');
             
             try {
                 init();
+                console.log('✅ Agenda AI Google Integration caricata con successo');
                 
-                // Messaggi informativi dopo l'inizializzazione
+                // Mostra notifiche informative dopo 2 secondi
                 setTimeout(() => {
                     if (!isDbConnected) {
-                        showNotification('💡 TIP: Configura Supabase in config.js per salvare i dati', 'info');
+                        showNotification('⚠️ DATABASE: Configura le credenziali Supabase per salvare i dati', 'warning');
                     }
                     
                     setTimeout(() => {
                         if (!isGoogleConnected) {
-                            showNotification('📧 TIP: Clicca "Connetti" per sincronizzare Google Calendar', 'info');
+                            showNotification('📧 GOOGLE: Clicca "Connetti" per sincronizzare Calendar e Gmail', 'info');
                         }
                     }, 2000);
-                }, 3000);
+                }, 2000);
                 
             } catch (error) {
                 console.error('Errore caricamento:', error);
@@ -879,12 +3432,8 @@ Apri la console per dettagli tecnici.
             }
         });
 
-        // Log finale
-        console.log('🎉 Agenda AI JavaScript caricato con configurazione centralizzata!');
-        console.log('💡 Comandi disponibili nella console:');
-        console.log('   - runConfigDiagnostics() - Diagnostica configurazione');
-        console.log('   - validateConfig() - Valida configurazione');
-        console.log('   - AGENDA_DEBUG - Comandi debug (se attivo)');
+        console.log('🎉 JavaScript Agenda AI Google Integration caricato!');
     </script>
 </body>
 </html>
+                    '
