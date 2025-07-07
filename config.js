@@ -11,15 +11,15 @@ const CONFIG = {
     google: {
         // 🔑 API Key da Google Cloud Console > Credenziali > Crea credenziali > Chiave API
         // Esempio: 'AIzaSyB...'
-        apiKey: 'INSERISCI_LA_TUA_GOOGLE_API_KEY_QUI',
+        apiKey: 'AIzaSyBcNSqX0LryFhqzjFWHiq6hMV5S1a9LQfM',
         
         // 🔐 Client ID OAuth 2.0 da Google Cloud Console > Credenziali > Crea credenziali > ID client OAuth 2.0
         // Esempio: '123456789-abc...apps.googleusercontent.com'
-        clientId: 'INSERISCI_IL_TUO_CLIENT_ID_QUI.apps.googleusercontent.com',
+        clientId: '305495314465-j13l2f6scmoqvdadgsnvpskm89g5r6n0.apps.googleusercontent.com',
         
         // 📧 Il tuo indirizzo Gmail principale (quello che usi per Calendar)
         // Esempio: 'mario.rossi@gmail.com'
-        calendarId: 'INSERISCI_LA_TUA_EMAIL@gmail.com',
+        calendarId: 'https://calendar.google.com/calendar/embed?src=franzvac%40gmail.com&ctz=Europe%2FRome',
         
         // 🔐 Permessi richiesti - NON MODIFICARE se non sai cosa fai
         scopes: [
@@ -32,8 +32,8 @@ const CONFIG = {
         // 🌐 Domini autorizzati - AGGIORNA con il tuo dominio GitHub Pages
         authorizedDomains: [
             'localhost:3000',
-            'INSERISCI_TUO_USERNAME.github.io',
-            'INSERISCI_TUO_USERNAME.github.io/NOME_REPOSITORY'
+            'https://franzvac.github.io',
+            'https://franzvac.github.io/agenda-ai'
         ]
     },
 
@@ -43,11 +43,11 @@ const CONFIG = {
     supabase: {
         // 🔗 URL del progetto Supabase da Settings > API > Project URL
         // Esempio: 'https://abc123.supabase.co'
-        url: 'https://INSERISCI_TUO_PROGETTO.supabase.co',
+        url: 'https://daleylnucyoxpwvgwvzu.supabase.co',
         
         // 🔑 Anon/Public Key da Supabase > Settings > API > Project API keys > anon public
         // Esempio: 'eyJ...'
-        anonKey: 'INSERISCI_LA_TUA_SUPABASE_ANON_KEY_QUI',
+        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhbGV5bG51Y3lveHB3dmd3dnp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4MDYwMzUsImV4cCI6MjA2NzM4MjAzNX0.9AKtkBhXvhKVwwaOpZxiRFfkGepMXQ_SV0YStZ5Alg0',
         
         // 📊 Nome tabelle database - Personalizza se necessario
         tables: {
@@ -65,11 +65,11 @@ const CONFIG = {
     github: {
         // 👤 Il tuo username GitHub
         // Esempio: 'mario-rossi'
-        username: 'INSERISCI_TUO_USERNAME_GITHUB',
+        username: 'franzvac',
         
         // 📂 Nome del repository dove hai l'agenda
         // Esempio: 'agenda-ai'
-        repository: 'INSERISCI_NOME_REPOSITORY',
+        repository: 'agenda-ai',
         
         // 🔑 Personal Access Token GitHub (OPZIONALE - per funzioni avanzate)
         // Lascia vuoto se non ne hai bisogno
